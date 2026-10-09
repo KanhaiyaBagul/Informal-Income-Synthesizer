@@ -155,6 +155,17 @@ export default function WhatIfSimulator() {
   const probDelta = Number(((simFhs - baseFhs) * 0.70).toFixed(1));
   const simProb = Math.min(99.0, Math.max(30.0, Number((baseProb + probDelta).toFixed(1))));
 
+  // Simulated Loan Sizing (Component 7 inline projection)
+  const simVolatilityDiscount = Math.max(0.70, 1.0 - (profile.cv * 0.5));
+  const simSafeEmi = Math.max(0, Math.round(simSurplus * 0.35 * simVolatilityDiscount));
+  const simApr = simProb >= 75 && simFhs >= 75 ? 14.5 : simProb >= 60 && simFhs >= 60 ? 18.0 : 24.0;
+  const simTenure = simProb >= 75 && simFhs >= 75 ? 12 : simProb >= 60 && simFhs >= 60 ? 6 : 3;
+  const simMonthlyRate = simApr / 100 / 12;
+  const simPrincipal = simMonthlyRate > 0 && simSafeEmi > 0
+    ? Math.min(simGross * 3, Math.round((simSafeEmi * ((1 - Math.pow(1 + simMonthlyRate, -simTenure)) / simMonthlyRate)) / 100) * 100)
+    : 0;
+  const simPricingTier = simProb >= 75 && simFhs >= 75 ? 'PRIME TIER A' : simProb >= 60 && simFhs >= 60 ? 'STANDARD TIER B' : 'NEAR-PRIME TIER C';
+
   return (
     <div className="space-y-6">
       {/* File & Persona Selector Pill Row */}
@@ -390,6 +401,48 @@ export default function WhatIfSimulator() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Simulated Loan Sizing Impact Panel */}
+      <div className="bg-[#0E0E0E] border border-[#222222] rounded-2xl p-6">
+        <div className="flex items-center justify-between pb-4 border-b border-[#222222]">
+          <div>
+            <span className="text-xs font-mono uppercase text-neutral-400">Projected Credit Capacity Impact</span>
+            <h4 className="text-sm font-bold text-white mt-0.5">Simulated Loan Sizing — Component 7 Projection</h4>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+            simProb >= 60 && simFhs >= 60 ? 'bg-white text-black' : 'bg-[#141414] text-neutral-400 border border-[#262626]'
+          }`}>
+            {simPricingTier}
+          </span>
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-xs">
+          <div>
+            <span className="text-[11px] text-neutral-500 font-mono block">Projected Max Credit</span>
+            <span className="num-mono text-2xl font-black text-white">
+              ₹{simPrincipal > 0 ? simPrincipal.toLocaleString() : '—'}
+            </span>
+          </div>
+          <div>
+            <span className="text-[11px] text-neutral-500 font-mono block">Simulated Safe EMI</span>
+            <span className="num-mono text-2xl font-black text-white">
+              ₹{simSafeEmi > 0 ? simSafeEmi.toLocaleString() : '—'}<span className="text-xs text-neutral-400 font-normal">/mo</span>
+            </span>
+          </div>
+          <div>
+            <span className="text-[11px] text-neutral-500 font-mono block">Projected APR</span>
+            <span className="num-mono text-xl font-bold text-white">{simApr}%</span>
+          </div>
+          <div>
+            <span className="text-[11px] text-neutral-500 font-mono block">Projected Tenure</span>
+            <span className="num-mono text-xl font-bold text-white">{simTenure} Months</span>
+          </div>
+        </div>
+        
+        <p className="text-[11px] text-neutral-500 font-mono mt-4 pt-3 border-t border-[#222222]">
+          ⚠ Hypothetical simulation only. Approved credit terms are determined by the official underwriting engine on your verified CSV statement. Adjust sliders to explore how financial improvements unlock better pricing tiers.
+        </p>
       </div>
     </div>
   );

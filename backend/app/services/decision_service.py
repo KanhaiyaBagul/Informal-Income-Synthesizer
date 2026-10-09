@@ -5,8 +5,14 @@ unambiguous reason codes, checklist statuses, and actionable next steps.
 Separates normative credit policies from model predictions.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
+try:
+    from .anomaly_fraud_service import AnomalyAuditReport
+    from .loan_sizing_service import LoanOfferRecommendation
+except ImportError:
+    from backend.app.services.anomaly_fraud_service import AnomalyAuditReport
+    from backend.app.services.loan_sizing_service import LoanOfferRecommendation
 
 class PolicyCriterionResult(BaseModel):
     rule_id: str
@@ -14,21 +20,23 @@ class PolicyCriterionResult(BaseModel):
     target_threshold: str
     actual_value_formatted: str
     is_passed: bool
-    status_tag: str # "PASSED", "WARNING", "FAILED"
+    status_tag: str  # "PASSED", "WARNING", "FAILED"
     reason_code: str
     remediation_advice: str
 
 
 class UnderwritingDecisionResult(BaseModel):
-    decision_status: str # "ELIGIBLE", "CONDITIONAL_APPROVAL", "NOT_ELIGIBLE"
+    decision_status: str  # "ELIGIBLE", "CONDITIONAL_APPROVAL", "NOT_ELIGIBLE"
     status_label: str
-    status_badge_color: str # "LIME", "AMBER", "RED"
+    status_badge_color: str  # "LIME", "AMBER", "RED"
     policy_version: str
     criteria_evaluated: List[PolicyCriterionResult]
     passed_count: int
     total_rules_count: int
     primary_reason_codes: List[str]
     actionable_next_steps: List[str]
+    approved_loan_offer: Optional[LoanOfferRecommendation] = None
+    fraud_risk_level: str = "CLEAN"  # "CLEAN", "WARNING", "HIGH_RISK"
 
 
 def evaluate_underwriting_policy(
@@ -38,12 +46,15 @@ def evaluate_underwriting_policy(
     repayment_prob: float,
     debt_to_surplus_ratio: float,
     coverage_months: int,
-    volatility_cv: float
+    volatility_cv: float,
+    fraud_report: Optional[AnomalyAuditReport] = None,
+    loan_offer: Optional[LoanOfferRecommendation] = None
 ) -> UnderwritingDecisionResult:
     """
-    Evaluates 5 explicit lending policy criteria and returns auditable reason codes.
+    Evaluates institutional lending policy criteria and returns auditable reason codes,
+    incorporating fraud integrity checks and loan sizing terms.
     """
-    criteria = []
+    criteria: List[PolicyCriterionResult] = []
 
     # Rule 1: Minimum Monthly Surplus >= INR 6,000
     r1_pass = monthly_surplus >= 6000.0
@@ -110,17 +121,50 @@ def evaluate_underwriting_policy(
         remediation_advice="Stabilize day-to-day sales consistency to reduce model cashflow volatility penalties."
     ))
 
+    # Rule 6: Fraud & Syndicate Integrity Audit
+    fraud_risk_level = "CLEAN"
+    r6_pass = True
+    fraud_msg = "Clean - No suspicious patterns"
+    fraud_remed = "Maintain clean digital cash transactions without counterparty clustering."
+    
+    if fraud_report is not None:
+        if fraud_report.is_suspicious or fraud_report.risk_score_penalty >= 20:
+            r6_pass = False
+            fraud_risk_level = "HIGH_RISK"
+            fraud_msg = f"Critical risk: {len(fraud_report.flags_triggered)} anomaly flags (penalty -{fraud_report.risk_score_penalty} pts)"
+            fraud_remed = "Resolve circular transactions and provide verified invoices for major customer counterparties."
+        elif fraud_report.risk_score_penalty > 0 or fraud_report.customer_concentration_ratio > 0.50:
+            r6_pass = True  # Warning level
+            fraud_risk_level = "WARNING"
+            fraud_msg = f"Warning: concentration at {fraud_report.customer_concentration_ratio*100:.1f}% (penalty -{fraud_report.risk_score_penalty} pts)"
+            fraud_remed = "Diversify customer payment sources to reduce counterparty concentration."
+
+    criteria.append(PolicyCriterionResult(
+        rule_id="RULE_06_FRAUD_INTEGRITY",
+        rule_name="Transaction Integrity & Anti-Syndicate Audit",
+        target_threshold="No critical circular flows or >60% concentration",
+        actual_value_formatted=fraud_msg,
+        is_passed=r6_pass,
+        status_tag="PASSED" if (r6_pass and fraud_risk_level == "CLEAN") else ("WARNING" if fraud_risk_level == "WARNING" else "FAILED"),
+        reason_code="INTEGRITY_VERIFIED" if r6_pass else "CRITICAL_FRAUD_OR_ANOMALY_RISK",
+        remediation_advice=fraud_remed
+    ))
+
     passed_count = sum(1 for c in criteria if c.is_passed)
     total_count = len(criteria)
 
-    # Determine overall status
-    if passed_count == total_count:
+    # Determine overall status with Fraud Override Guard
+    if fraud_risk_level == "HIGH_RISK":
+        status = "NOT_ELIGIBLE"
+        label = "Declined — Critical Fraud or Anomaly Risk Flagged"
+        color = "RED"
+    elif passed_count == total_count:
         status = "ELIGIBLE"
         label = "Eligible for Micro-Credit Facility"
         color = "LIME"
-    elif passed_count >= 3 and r1_pass:
+    elif passed_count >= 4 and r1_pass:
         status = "CONDITIONAL_APPROVAL"
-        label = "Conditional Approval / Manual Review"
+        label = "Conditional Approval / Manual Underwriter Review"
         color = "AMBER"
     else:
         status = "NOT_ELIGIBLE"
@@ -134,16 +178,36 @@ def evaluate_underwriting_policy(
 
     next_steps = [c.remediation_advice for c in criteria if not c.is_passed]
     if not next_steps:
-        next_steps = ["Proceed to download Digital Financial Passport and present to authorized partner lenders."]
+        next_steps = ["Proceed to review approved loan sizing offer and issue Digital Financial Passport."]
+
+    # Sync approved loan offer according to final eligibility
+    final_loan_offer = None
+    if loan_offer is not None:
+        if status == "NOT_ELIGIBLE":
+            final_loan_offer = LoanOfferRecommendation(
+                is_eligible_for_loan=False,
+                max_recommended_loan_inr=0.0,
+                recommended_tenure_months=0,
+                max_safe_monthly_emi_inr=0.0,
+                risk_adjusted_apr_percent=0.0,
+                expected_total_repayment_inr=0.0,
+                debt_service_burden_ratio=0.0,
+                pricing_tier="INELIGIBLE",
+                underwriting_notes=f"Loan offer withheld due to underwriting decline: {', '.join(reasons[:2])}"
+            )
+        else:
+            final_loan_offer = loan_offer
 
     return UnderwritingDecisionResult(
         decision_status=status,
         status_label=label,
         status_badge_color=color,
-        policy_version="MFI-Standard-Micro-Policy-2026.1",
+        policy_version="MFI-Standard-Micro-Policy-2026.2",
         criteria_evaluated=criteria,
         passed_count=passed_count,
         total_rules_count=total_count,
         primary_reason_codes=reasons,
-        actionable_next_steps=next_steps
+        actionable_next_steps=next_steps,
+        approved_loan_offer=final_loan_offer,
+        fraud_risk_level=fraud_risk_level
     )

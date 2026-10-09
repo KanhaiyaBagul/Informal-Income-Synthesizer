@@ -24,6 +24,31 @@ interface PassportAssessment {
   };
   underwriting_decision: {
     decision_status: string;
+    status_label?: string;
+    fraud_risk_level?: string;
+    approved_loan_offer?: {
+      is_eligible_for_loan: boolean;
+      max_recommended_loan_inr: number;
+      recommended_tenure_months: number;
+      max_safe_monthly_emi_inr: number;
+      risk_adjusted_apr_percent: number;
+      pricing_tier: string;
+    };
+  };
+  loan_sizing?: {
+    is_eligible_for_loan: boolean;
+    max_recommended_loan_inr: number;
+    recommended_tenure_months: number;
+    max_safe_monthly_emi_inr: number;
+    risk_adjusted_apr_percent: number;
+    pricing_tier: string;
+    underwriting_notes: string;
+  };
+  fraud_audit?: {
+    is_suspicious: boolean;
+    risk_score_penalty: number;
+    flags_triggered: string[];
+    audit_summary: string;
   };
 }
 
@@ -290,6 +315,64 @@ export default function DigitalPassportViewer() {
             </div>
           </div>
         </div>
+
+        {/* Approved Credit Offer Section */}
+        {data.loan_sizing && data.loan_sizing.is_eligible_for_loan && (
+          <div className="mt-6 pt-6 border-t border-[#222222]">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-3">
+              ◆ Approved Credit Facility Terms
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 bg-black rounded-xl border border-white/20">
+                <span className="text-[10px] text-neutral-400 uppercase block">Max Credit Facility</span>
+                <span className="num-mono text-base font-bold text-white mt-0.5 block">
+                  ₹{Math.round(data.loan_sizing.max_recommended_loan_inr).toLocaleString()}
+                </span>
+              </div>
+              <div className="p-3 bg-black rounded-xl border border-[#222222]">
+                <span className="text-[10px] text-neutral-500 uppercase block">Safe Monthly EMI</span>
+                <span className="num-mono text-base font-bold text-white mt-0.5 block">
+                  ₹{Math.round(data.loan_sizing.max_safe_monthly_emi_inr).toLocaleString()}/mo
+                </span>
+              </div>
+              <div className="p-3 bg-black rounded-xl border border-[#222222]">
+                <span className="text-[10px] text-neutral-500 uppercase block">Risk-Adjusted APR</span>
+                <span className="num-mono text-base font-bold text-white mt-0.5 block">
+                  {data.loan_sizing.risk_adjusted_apr_percent}% p.a.
+                </span>
+              </div>
+              <div className="p-3 bg-black rounded-xl border border-[#222222]">
+                <span className="text-[10px] text-neutral-500 uppercase block">Tenure Term</span>
+                <span className="num-mono text-base font-bold text-white mt-0.5 block">
+                  {data.loan_sizing.recommended_tenure_months} Months
+                </span>
+              </div>
+            </div>
+            <p className="text-[11px] text-neutral-500 font-mono mt-2">
+              Pricing Tier: <strong className="text-white">{data.loan_sizing.pricing_tier?.replace(/_/g, ' ')}</strong>
+              {' '} — {data.loan_sizing.underwriting_notes}
+            </p>
+          </div>
+        )}
+
+        {/* Transaction Integrity Badge */}
+        {data.fraud_audit && (
+          <div className="mt-4 p-3 rounded-xl border flex items-center justify-between text-xs font-mono"
+            style={{
+              background: data.fraud_audit.is_suspicious ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.02)',
+              borderColor: data.fraud_audit.is_suspicious ? 'rgba(239,68,68,0.3)' : '#262626'
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${data.fraud_audit.is_suspicious ? 'bg-red-500' : 'bg-white'}`}></span>
+              <span className="text-neutral-400">Anti-Syndicate Audit:</span>
+              <span className={`font-bold ${data.fraud_audit.is_suspicious ? 'text-red-400' : 'text-white'}`}>
+                {data.fraud_audit.is_suspicious ? 'ANOMALOUS PATTERNS DETECTED' : 'INTEGRITY VERIFIED — Clean'}
+              </span>
+            </div>
+            <span className="text-neutral-500">Penalty: -{data.fraud_audit.risk_score_penalty} pts</span>
+          </div>
+        )}
 
         {/* Bottom Verification & Security Row */}
         <div className="mt-8 pt-6 border-t border-[#222222] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[11px] text-neutral-400 font-mono">

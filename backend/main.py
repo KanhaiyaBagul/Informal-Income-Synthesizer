@@ -12,7 +12,10 @@ from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import google.generativeai as genai
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,6 +40,18 @@ from backend.app.services.credit_risk_service import (
 from backend.app.services.decision_service import (
     evaluate_underwriting_policy,
     UnderwritingDecisionResult
+)
+from backend.app.services.anomaly_fraud_service import (
+    audit_transactions_for_fraud,
+    AnomalyAuditReport
+)
+from backend.app.services.loan_sizing_service import (
+    calculate_loan_sizing,
+    LoanOfferRecommendation
+)
+from backend.app.services.adverse_action_service import (
+    generate_adverse_action_notice,
+    AdverseActionNotice
 )
 from backend.app.services.scenario_service import (
     simulate_what_if_scenario,
@@ -85,6 +100,8 @@ class AssessmentUnifiedResponse(BaseModel):
     financial_health_score: FHSAssessmentResult
     credit_risk_ml: CreditRiskEvaluationResult
     underwriting_decision: UnderwritingDecisionResult
+    loan_sizing: LoanOfferRecommendation
+    fraud_audit: AnomalyAuditReport
 
 
 @app.get("/api/health")
@@ -200,10 +217,13 @@ def _orchestrate_assessment(
 ) -> AssessmentUnifiedResponse:
     assessment_id = f"ASM_{uuid.uuid4().hex[:8].upper()}"
 
-    # 1. Income Synthesis
+    # 1. Income Synthesis (Component 2)
     income_res = synthesize_income_from_transactions(df, min_ledger_balance=min_bal)
 
-    # 2. Financial Health Score (Deterministic formula)
+    # 2. Fraud & Anomaly Guard (Component 3)
+    fraud_res = audit_transactions_for_fraud(df)
+
+    # 3. Deterministic 5-Pillar Financial Health Score with fraud penalty integration (Component 4)
     fhs_inp = FHSInputFeatures(
         monthly_gross_receipts=income_res.average_monthly_gross_receipts,
         monthly_operating_expenses=income_res.average_monthly_expenses,
@@ -212,9 +232,9 @@ def _orchestrate_assessment(
         min_ledger_balance=min_bal,
         data_coverage_months=income_res.data_coverage_months
     )
-    fhs_res = calculate_financial_health_score(fhs_inp)
+    fhs_res = calculate_financial_health_score(fhs_inp, fraud_penalty=fraud_res.risk_score_penalty)
 
-    # 3. Alternative Credit Risk ML (XGBoost + SHAP)
+    # 4. Alternative Credit Risk ML (XGBoost + TreeSHAP) (Components 5 & 6)
     ml_features = {
         "monthly_gross_receipts": income_res.average_monthly_gross_receipts,
         "monthly_operating_expenses": income_res.average_monthly_expenses,
@@ -227,7 +247,17 @@ def _orchestrate_assessment(
     }
     risk_res = evaluate_credit_risk(ml_features)
 
-    # 4. Underwriting Decision Criteria
+    # 5. Loan Sizing, Safe EMI & APR Pricing (Component 7)
+    loan_offer = calculate_loan_sizing(
+        monthly_gross=income_res.average_monthly_gross_receipts,
+        monthly_surplus=income_res.average_monthly_net_surplus,
+        monthly_existing_emi=income_res.average_monthly_debt_emi,
+        repayment_prob_percent=risk_res.repayment_probability_percent,
+        fhs_score=fhs_res.overall_score,
+        volatility_cv=income_res.income_volatility_cv
+    )
+
+    # 6. Underwriting Decision Criteria with Fraud & Loan Sizing Sync (Component 8)
     debt_ratio = ml_features["debt_to_surplus_ratio"]
     decision_res = evaluate_underwriting_policy(
         monthly_gross=income_res.average_monthly_gross_receipts,
@@ -236,7 +266,9 @@ def _orchestrate_assessment(
         repayment_prob=risk_res.repayment_probability_percent,
         debt_to_surplus_ratio=debt_ratio,
         coverage_months=income_res.data_coverage_months,
-        volatility_cv=income_res.income_volatility_cv
+        volatility_cv=income_res.income_volatility_cv,
+        fraud_report=fraud_res,
+        loan_offer=loan_offer
     )
 
     response_payload = AssessmentUnifiedResponse(
@@ -247,7 +279,9 @@ def _orchestrate_assessment(
         income_synthesis=income_res,
         financial_health_score=fhs_res,
         credit_risk_ml=risk_res,
-        underwriting_decision=decision_res
+        underwriting_decision=decision_res,
+        loan_sizing=loan_offer,
+        fraud_audit=fraud_res
     )
 
     # Persist in session store
@@ -255,6 +289,148 @@ def _orchestrate_assessment(
     ASSESSMENT_STORE[assessment_id] = dict_payload
     ASSESSMENT_STORE["latest"] = dict_payload
     return response_payload
+
+
+class BatchApplicantSummary(BaseModel):
+    assessment_id: str
+    applicant_name: str
+    business_name: str
+    fhs_score: int
+    health_band: str
+    repayment_probability_percent: float
+    risk_tier: str
+    decision_status: str
+    status_label: str
+    status_badge_color: str
+    max_recommended_loan_inr: float
+    max_safe_monthly_emi_inr: float
+    fraud_risk_level: str
+    is_suspicious_fraud: bool
+
+
+class BatchAssessmentResponse(BaseModel):
+    total_processed: int
+    eligible_count: int
+    conditional_count: int
+    declined_count: int
+    total_credit_extended_inr: float
+    results: List[BatchApplicantSummary]
+
+
+@app.post("/api/assessments/batch", response_model=BatchAssessmentResponse)
+async def assess_batch_statements(files: List[UploadFile] = File(...)):
+    """
+    Bulk processing pipeline for microfinance institutions:
+    Ingests and evaluates up to 50 statement CSVs concurrently.
+    """
+    if len(files) > 50:
+        raise HTTPException(status_code=400, detail="Maximum 50 files allowed per batch assessment.")
+
+    summaries = []
+    eligible_count = 0
+    conditional_count = 0
+    declined_count = 0
+    total_credit = 0.0
+
+    for file in files:
+        content = await file.read()
+        try:
+            df = parse_transaction_csv(content)
+            # Infer applicant name from filename (e.g., sample_street_vendor_ramesh.csv -> Ramesh)
+            raw_name = file.filename.replace(".csv", "").replace("sample_", "").replace("_", " ").title()
+            res = _orchestrate_assessment(df, 8000.0, raw_name, "Local Enterprise", "general_merchant")
+            
+            status = res.underwriting_decision.decision_status
+            if status == "ELIGIBLE":
+                eligible_count += 1
+                total_credit += res.loan_sizing.max_recommended_loan_inr
+            elif status == "CONDITIONAL_APPROVAL":
+                conditional_count += 1
+                total_credit += res.loan_sizing.max_recommended_loan_inr
+            else:
+                declined_count += 1
+
+            summaries.append(BatchApplicantSummary(
+                assessment_id=res.assessment_id,
+                applicant_name=res.applicant_name,
+                business_name=res.business_name,
+                fhs_score=res.financial_health_score.overall_score,
+                health_band=res.financial_health_score.health_band,
+                repayment_probability_percent=res.credit_risk_ml.repayment_probability_percent,
+                risk_tier=res.credit_risk_ml.risk_tier,
+                decision_status=res.underwriting_decision.decision_status,
+                status_label=res.underwriting_decision.status_label,
+                status_badge_color=res.underwriting_decision.status_badge_color,
+                max_recommended_loan_inr=res.loan_sizing.max_recommended_loan_inr,
+                max_safe_monthly_emi_inr=res.loan_sizing.max_safe_monthly_emi_inr,
+                fraud_risk_level=res.underwriting_decision.fraud_risk_level,
+                is_suspicious_fraud=res.fraud_audit.is_suspicious
+            ))
+        except Exception as e:
+            # Skip invalid CSV gracefully
+            continue
+
+    return BatchAssessmentResponse(
+        total_processed=len(summaries),
+        eligible_count=eligible_count,
+        conditional_count=conditional_count,
+        declined_count=declined_count,
+        total_credit_extended_inr=total_credit,
+        results=summaries
+    )
+
+
+class AdverseActionLetterRequest(BaseModel):
+    language: Optional[str] = "en"
+    tone: Optional[str] = "borrower"
+
+
+@app.api_route("/api/decisions/{assessment_id}/letter", methods=["GET", "POST"], response_model=AdverseActionNotice)
+def get_or_create_adverse_action_letter(
+    assessment_id: str,
+    language: Optional[str] = Query(None),
+    tone: Optional[str] = Query("borrower"),
+    req: Optional[AdverseActionLetterRequest] = None
+):
+    """
+    Generates regulatory adverse action notices and explainability letters in English, Hindi, and Marathi.
+    """
+    selected_lang = (req.language if req and req.language else language) or "en"
+    selected_tone = (req.tone if req and req.tone else tone) or "borrower"
+
+    aid = assessment_id.strip()
+    data = None
+    if aid in ASSESSMENT_STORE:
+        data = ASSESSMENT_STORE[aid]
+    elif aid.lower() in ["ramesh", "priya", "arun"]:
+        df, meta = load_preset_transactions(aid.lower())
+        res = _orchestrate_assessment(df, meta["min_balance"], meta["name"], meta["business"], meta["type"])
+        data = res.dict()
+    elif "latest" in ASSESSMENT_STORE:
+        data = ASSESSMENT_STORE["latest"]
+    else:
+        df, meta = load_preset_transactions("ramesh")
+        default_res = _orchestrate_assessment(df, meta["min_balance"], meta["name"], meta["business"], meta["type"])
+        data = default_res.dict()
+
+    shap_factors = data.get("credit_risk_ml", {}).get("attributions", [])
+    reasons = data.get("underwriting_decision", {}).get("primary_reason_codes", [])
+    steps = data.get("underwriting_decision", {}).get("actionable_next_steps", [])
+
+    return generate_adverse_action_notice(
+        applicant_name=data["applicant_name"],
+        business_name=data["business_name"],
+        decision_status=data["underwriting_decision"]["decision_status"],
+        fhs_score=data["financial_health_score"]["overall_score"],
+        repayment_prob_percent=data["credit_risk_ml"]["repayment_probability_percent"],
+        monthly_gross=data["income_synthesis"]["average_monthly_gross_receipts"],
+        monthly_surplus=data["income_synthesis"]["average_monthly_net_surplus"],
+        shap_factors=shap_factors,
+        reason_codes=reasons,
+        actionable_steps=steps,
+        language=selected_lang,
+        tone=selected_tone
+    )
 
 
 @app.get("/api/assessments/{assessment_id}")
@@ -284,6 +460,42 @@ def run_scenario_simulation(delta: ScenarioInputDelta):
     Evaluates isolated What-If scenario without mutating baseline record.
     """
     return simulate_what_if_scenario(delta)
+
+
+@app.get("/api/summary/latest")
+def get_latest_summary():
+    """
+    Returns a compact cross-page KPI summary for the most recently assessed applicant.
+    Enables any frontend page (Simulator, Passport, Fairness) to show synced assessment context.
+    """
+    data = ASSESSMENT_STORE.get("latest")
+    if not data:
+        # Auto-seed with Arun as default
+        df, meta = load_preset_transactions("arun")
+        res = _orchestrate_assessment(df, meta["min_balance"], meta["name"], meta["business"], meta["type"])
+        data = res.dict()
+    
+    return {
+        "assessment_id": data["assessment_id"],
+        "applicant_name": data["applicant_name"],
+        "business_name": data["business_name"],
+        "business_type": data["business_type"],
+        "fhs_score": data["financial_health_score"]["overall_score"],
+        "health_band": data["financial_health_score"]["health_band"],
+        "repayment_probability_percent": data["credit_risk_ml"]["repayment_probability_percent"],
+        "risk_tier": data["credit_risk_ml"]["risk_tier"],
+        "decision_status": data["underwriting_decision"]["decision_status"],
+        "status_label": data["underwriting_decision"].get("status_label", ""),
+        "fraud_risk_level": data["underwriting_decision"].get("fraud_risk_level", "CLEAN"),
+        "monthly_gross": data["income_synthesis"]["average_monthly_gross_receipts"],
+        "monthly_surplus": data["income_synthesis"]["average_monthly_net_surplus"],
+        "max_loan_inr": data.get("loan_sizing", {}).get("max_recommended_loan_inr", 0),
+        "safe_emi_inr": data.get("loan_sizing", {}).get("max_safe_monthly_emi_inr", 0),
+        "apr_percent": data.get("loan_sizing", {}).get("risk_adjusted_apr_percent", 0),
+        "tenure_months": data.get("loan_sizing", {}).get("recommended_tenure_months", 0),
+        "is_fraud_suspicious": data.get("fraud_audit", {}).get("is_suspicious", False),
+        "fraud_penalty": data.get("fraud_audit", {}).get("risk_score_penalty", 0),
+    }
 
 
 @app.get("/api/fairness/audits")
@@ -356,6 +568,8 @@ class ChatRequest(BaseModel):
 @app.post("/api/chat")
 def chat_with_ai(req: ChatRequest):
     api_key = os.environ.get("GEMINI_API_KEY")
+    if not genai:
+        return {"reply": "EquiScore AI Chat Assistant: Operational in offline explanation mode."}
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not set in backend environment.")
     

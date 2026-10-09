@@ -76,6 +76,27 @@ interface AssessmentData {
     reason_codes?: string[];
     actionable_next_steps?: string[];
     actionable_recommendations?: string[];
+    fraud_risk_level?: string;
+  };
+  loan_sizing?: {
+    is_eligible_for_loan: boolean;
+    max_recommended_loan_inr: number;
+    recommended_tenure_months: number;
+    max_safe_monthly_emi_inr: number;
+    risk_adjusted_apr_percent: number;
+    expected_total_repayment_inr: number;
+    debt_service_burden_ratio: number;
+    pricing_tier: string;
+    underwriting_notes: string;
+  };
+  fraud_audit?: {
+    is_suspicious: boolean;
+    risk_score_penalty: number;
+    flags_triggered: string[];
+    customer_concentration_ratio: number;
+    max_counterparty_share_percent: number;
+    velocity_spike_ratio: number;
+    audit_summary: string;
   };
 }
 
@@ -84,6 +105,10 @@ export default function LiveDashboard() {
   const [activeSource, setActiveSource] = useState<string>('arun');
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [showLetterModal, setShowLetterModal] = useState<boolean>(false);
+  const [letterLanguage, setLetterLanguage] = useState<'en' | 'hi' | 'mr'>('en');
+  const [letterData, setLetterData] = useState<any>(null);
+  const [letterLoading, setLetterLoading] = useState<boolean>(false);
 
   // Switch between CSV datasets
   const switchCsvDataset = async (key: string) => {
@@ -104,6 +129,23 @@ export default function LiveDashboard() {
       setFetchError(e.message || "Could not load dataset from backend.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAdverseActionLetter = async (lang: 'en' | 'hi' | 'mr') => {
+    setLetterLanguage(lang);
+    setLetterLoading(true);
+    try {
+      const aid = assessment?.assessment_id || activeSource;
+      const res = await fetch(`http://localhost:8000/api/decisions/${aid}/letter?language=${lang}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLetterData(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch adverse action letter", err);
+    } finally {
+      setLetterLoading(false);
     }
   };
 
@@ -407,6 +449,110 @@ export default function LiveDashboard() {
         </div>
       </div>
 
+      {/* Loan Offer Sizing & Fraud Integrity Audit Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Loan Sizing Card */}
+        <div className="card-mono flex flex-col justify-between border-l-4 border-l-white">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono uppercase text-neutral-400">Component 7 Engine</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-black font-mono">
+                  {assessment.loan_sizing?.pricing_tier?.replace(/_/g, ' ') || 'STANDARD TIER'}
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-neutral-400">Debt Capacity Sizing</span>
+            </div>
+            
+            <h4 className="text-sm font-bold text-white mb-1">Approved Credit Sizing & EMI Offer</h4>
+            <p className="text-xs text-neutral-400 font-light mb-4">
+              Safe credit ceiling constrained to ≤35% of unencumbered operating surplus and 3x monthly turnover.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 py-3 border-y border-[#222222]">
+              <div>
+                <span className="text-[11px] text-neutral-500 font-mono block">Max Credit Facility</span>
+                <span className="num-mono text-2xl font-black text-white">
+                  ₹{Math.round(assessment.loan_sizing?.max_recommended_loan_inr || 0).toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-neutral-500 font-mono block">Safe Monthly EMI</span>
+                <span className="num-mono text-2xl font-black text-white">
+                  ₹{Math.round(assessment.loan_sizing?.max_safe_monthly_emi_inr || 0).toLocaleString()}
+                  <span className="text-xs text-neutral-400 font-normal">/mo</span>
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-neutral-500 font-mono block">Risk-Adjusted APR</span>
+                <span className="num-mono text-lg font-bold text-white">
+                  {assessment.loan_sizing?.risk_adjusted_apr_percent || 18.0}% <span className="text-xs text-neutral-500 font-normal">p.a.</span>
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-neutral-500 font-mono block">Tenure Term</span>
+                <span className="num-mono text-lg font-bold text-white">
+                  {assessment.loan_sizing?.recommended_tenure_months || 6} Months
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+            <span>Debt-Burden Ratio: <strong className="text-white">{((assessment.loan_sizing?.debt_service_burden_ratio || 0.25) * 100).toFixed(1)}%</strong></span>
+            <span>Expected Total: <strong className="text-white">₹{Math.round(assessment.loan_sizing?.expected_total_repayment_inr || 0).toLocaleString()}</strong></span>
+          </div>
+        </div>
+
+        {/* Fraud & Anomaly Audit Card */}
+        <div className="card-mono flex flex-col justify-between border-l-4 border-l-neutral-600">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono uppercase text-neutral-400">Component 3 Guard</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+                  assessment.fraud_audit?.is_suspicious 
+                    ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                    : 'bg-white/10 text-white border border-white/20'
+                }`}>
+                  {assessment.fraud_audit?.is_suspicious ? 'HIGH ANOMALY RISK' : 'INTEGRITY VERIFIED'}
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-neutral-400">Anti-Syndicate Audit</span>
+            </div>
+
+            <h4 className="text-sm font-bold text-white mb-1">Transaction Integrity & Flow Audit</h4>
+            <p className="text-xs text-neutral-400 font-light mb-4">
+              Real-time screening for circular round-trips, velocity surges, and single-payer revenue clustering.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 py-3 border-y border-[#222222]">
+              <div>
+                <span className="text-[11px] text-neutral-500 font-mono block">Top Payer Concentration</span>
+                <span className="num-mono text-2xl font-black text-white">
+                  {((assessment.fraud_audit?.customer_concentration_ratio || 0.15) * 100).toFixed(1)}%
+                </span>
+                <span className="text-[10px] text-neutral-500 font-mono block mt-0.5">Policy Benchmark: ≤60%</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-neutral-500 font-mono block">Velocity Spike Ratio</span>
+                <span className="num-mono text-2xl font-black text-white">
+                  {(assessment.fraud_audit?.velocity_spike_ratio || 1.0).toFixed(2)}x
+                </span>
+                <span className="text-[10px] text-neutral-500 font-mono block mt-0.5">Spike Threshold: ≥3.5x</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 text-[11px] font-mono text-neutral-400 flex items-center justify-between">
+            <span>Score Penalty: <strong className="text-white">-{assessment.fraud_audit?.risk_score_penalty || 0} pts</strong></span>
+            <span className="truncate max-w-[220px]" title={assessment.fraud_audit?.audit_summary}>
+              {assessment.fraud_audit?.flags_triggered?.length ? `${assessment.fraud_audit.flags_triggered.length} Flags Triggered` : 'Clean Cashflow Patterns'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Reconstructed Monthly Cashflow Ledger */}
       <div className="bg-[#0E0E0E] border border-[#222222] rounded-2xl overflow-hidden shadow-card-subtle">
         <div className="p-6 border-b border-[#222222] flex items-center justify-between">
@@ -567,6 +713,16 @@ export default function LiveDashboard() {
           </div>
 
           <div className="mt-4 pt-4 border-t border-[#222222] space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowLetterModal(true);
+                fetchAdverseActionLetter(letterLanguage);
+              }}
+              className="w-full px-3 py-2.5 rounded-xl border border-[#333333] hover:border-white text-xs font-mono text-white bg-black hover:bg-[#141414] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>📄</span> Adverse Action / Credit Reason Letter (EN/HI/MR)
+            </button>
             <a 
               href={`/simulator?id=${assessment.assessment_id}`} 
               className="w-full btn-white text-xs py-2.5 flex items-center justify-center"
@@ -576,6 +732,111 @@ export default function LiveDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Multilingual Adverse Action & Disclosure Notice Modal */}
+      {showLetterModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0E0E0E] border border-[#333333] rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-[#222222] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">RBI Fair Lending Practice Disclosure</span>
+                <h3 className="text-base font-bold text-white mt-0.5">Adverse Action & Underwriting Reason Letter</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLetterModal(false)}
+                className="w-8 h-8 rounded-full bg-black border border-[#333333] text-neutral-400 hover:text-white flex items-center justify-center text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Language Switcher Tabs */}
+            <div className="flex items-center gap-2 p-4 bg-[#080808] border-b border-[#222222]">
+              <span className="text-xs text-neutral-400 font-mono">Language:</span>
+              <button
+                type="button"
+                onClick={() => fetchAdverseActionLetter('en')}
+                className={`px-3 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                  letterLanguage === 'en' ? 'bg-white text-black font-bold' : 'bg-black text-neutral-400 hover:text-white border border-[#262626]'
+                }`}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => fetchAdverseActionLetter('hi')}
+                className={`px-3 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                  letterLanguage === 'hi' ? 'bg-white text-black font-bold' : 'bg-black text-neutral-400 hover:text-white border border-[#262626]'
+                }`}
+              >
+                हिंदी (Hindi)
+              </button>
+              <button
+                type="button"
+                onClick={() => fetchAdverseActionLetter('mr')}
+                className={`px-3 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                  letterLanguage === 'mr' ? 'bg-white text-black font-bold' : 'bg-black text-neutral-400 hover:text-white border border-[#262626]'
+                }`}
+              >
+                मराठी (Marathi)
+              </button>
+            </div>
+
+            {/* Letter Body */}
+            <div className="p-6 overflow-y-auto space-y-4 font-mono text-xs text-neutral-300 leading-relaxed bg-[#050505] flex-1">
+              {letterLoading ? (
+                <div className="py-12 text-center text-neutral-500 font-mono">
+                  Loading verified regulatory disclosure notice...
+                </div>
+              ) : letterData ? (
+                <div className="space-y-4">
+                  <div className="p-3 rounded-lg bg-black border border-[#222222] flex items-center justify-between">
+                    <span>Notice ID: <strong className="text-white">{letterData.notice_id}</strong></span>
+                    <span>Date: <strong className="text-white">{letterData.date_issued}</strong></span>
+                  </div>
+                  <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-200 leading-relaxed">
+                    {letterData.full_letter_text}
+                  </pre>
+                  <div className="p-3 rounded-lg bg-neutral-900/50 border border-neutral-800 text-[11px] text-neutral-400">
+                    {letterData.regulatory_disclaimer}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-12 text-center text-neutral-500">
+                  Click a language tab to generate letter.
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-4 border-t border-[#222222] bg-[#0A0A0A] flex items-center justify-between">
+              <span className="text-[11px] text-neutral-500 font-mono">RBI Digital Lending Guidelines Compliant</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (letterData?.full_letter_text) {
+                      navigator.clipboard.writeText(letterData.full_letter_text);
+                      alert("Letter copied to clipboard!");
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-black border border-[#333333] hover:border-white text-white text-xs font-mono cursor-pointer"
+                >
+                  📋 Copy Text
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowLetterModal(false)}
+                  className="px-3 py-1.5 rounded-lg bg-white text-black font-bold text-xs font-mono cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

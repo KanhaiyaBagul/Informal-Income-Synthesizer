@@ -43,10 +43,13 @@ class FHSAssessmentResult(BaseModel):
     vulnerabilities: list[str]
 
 
-def calculate_financial_health_score(inputs: FHSInputFeatures) -> FHSAssessmentResult:
+def calculate_financial_health_score(
+    inputs: FHSInputFeatures,
+    fraud_penalty: int = 0
+) -> FHSAssessmentResult:
     """
     Computes a deterministic, reproducible Financial Health Score (0 - 100).
-    Pure mathematical formula; zero black-box hallucination.
+    Pure mathematical formula; integrates Component 3 fraud penalties if detected.
     """
     gross = max(0.01, inputs.monthly_gross_receipts)
     expenses = inputs.monthly_operating_expenses
@@ -171,9 +174,10 @@ def calculate_financial_health_score(inputs: FHSInputFeatures) -> FHSAssessmentR
         explanatory_note=p5_note
     )
 
-    # Total Composite Score (0 - 100)
+    # Total Composite Score (0 - 100) minus integrity/fraud penalty
     total_score = p1.weighted_score + p2.weighted_score + p3.weighted_score + p4.weighted_score + p5.weighted_score
-    overall_int = int(round(min(100.0, max(0.0, total_score))))
+    penalized_score = max(0.0, total_score - float(fraud_penalty))
+    overall_int = int(round(min(100.0, penalized_score)))
 
     if overall_int >= 80:
         band = "PRIME_STABLE"
@@ -187,6 +191,8 @@ def calculate_financial_health_score(inputs: FHSInputFeatures) -> FHSAssessmentR
     # Compile Strengths & Vulnerabilities
     strengths = []
     vulnerabilities = []
+    if fraud_penalty > 0:
+        vulnerabilities.append(f"Transaction Integrity Warning: Deduction of -{fraud_penalty} pts applied due to customer concentration or velocity surge flags.")
     pillars_dict = {
         "cash_flow_surplus": p1,
         "income_consistency": p2,

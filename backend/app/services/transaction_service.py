@@ -58,17 +58,29 @@ def parse_transaction_csv(file_bytes: bytes) -> pd.DataFrame:
         norm = str(col).strip().lower().replace(" ", "_").replace("-", "_")
         col_map[norm] = col
 
+    def find_matching_col(aliases: List[str]) -> Optional[str]:
+        # 1. Exact match
+        for a in aliases:
+            if a in col_map:
+                return col_map[a]
+        # 2. Substring match (e.g., "amount" in "amount_(inr)")
+        for norm_col, orig_col in col_map.items():
+            for a in aliases:
+                if a in norm_col:
+                    return orig_col
+        return None
+
     # Date column detection
     date_aliases = ["date", "txn_date", "transaction_date", "value_date", "posting_date", "time", "timestamp"]
-    matched_date = next((col_map[a] for a in date_aliases if a in col_map), None)
+    matched_date = find_matching_col(date_aliases)
 
     # Amount column detection
     amount_aliases = ["amount", "txn_amount", "transaction_amount", "value", "inr", "sum", "total"]
-    matched_amount = next((col_map[a] for a in amount_aliases if a in col_map), None)
+    matched_amount = find_matching_col(amount_aliases)
 
     # Direction column detection
     direction_aliases = ["direction", "type", "txn_type", "cr_dr", "cr/dr", "credit_debit", "flow", "action"]
-    matched_direction = next((col_map[a] for a in direction_aliases if a in col_map), None)
+    matched_direction = find_matching_col(direction_aliases)
 
     # Check minimum required: date and amount
     if not matched_date or not matched_amount:
@@ -79,18 +91,31 @@ def parse_transaction_csv(file_bytes: bytes) -> pd.DataFrame:
 
     # Category and description detection
     category_aliases = ["category", "tag", "purpose", "txn_category", "remarks"]
-    matched_category = next((col_map[a] for a in category_aliases if a in col_map), None)
+    matched_category = find_matching_col(category_aliases)
 
     desc_aliases = ["description", "narration", "memo", "details", "note", "remarks"]
-    matched_desc = next((col_map[a] for a in desc_aliases if a in col_map), None)
+    matched_desc = find_matching_col(desc_aliases)
 
     id_aliases = ["txn_id", "id", "transaction_id", "reference", "ref_no", "utr", "order_id"]
-    matched_id = next((col_map[a] for a in id_aliases if a in col_map), None)
+    matched_id = find_matching_col(id_aliases)
+
+    df = df.reset_index(drop=True)
 
     # Build normalized DataFrame
-    norm_df = pd.DataFrame()
-    norm_df["date"] = pd.to_datetime(df[matched_date], errors="coerce").dt.strftime("%Y-%m-%d")
-    raw_amount = pd.to_numeric(df[matched_amount].astype(str).str.replace(",", "").str.replace("₹", "").str.strip(), errors="coerce").fillna(0.0)
+    norm_df = pd.DataFrame(index=df.index)
+    norm_df["date"] = pd.to_datetime(df[matched_date], errors="coerce", format="mixed").dt.strftime("%Y-%m-%d")
+    
+    # Safe amount conversion
+    import re
+    def _clean_amt(val: Any) -> float:
+        try:
+            s = str(val).strip()
+            cleaned = re.sub(r"[^\d.-]", "", s)
+            return float(cleaned) if cleaned else 0.0
+        except Exception:
+            return 0.0
+
+    raw_amount = df[matched_amount].apply(_clean_amt)
 
     # Handle direction
     if matched_direction:
@@ -120,7 +145,13 @@ def parse_transaction_csv(file_bytes: bytes) -> pd.DataFrame:
     else:
         norm_df["description"] = "Statement Transaction"
 
-    norm_df["counterparty"] = "Third_Party"
+    # Counterparty / Payer detection
+    counterparty_aliases = ["counterparty", "payer", "payee", "beneficiary", "sender", "receiver", "party", "customer"]
+    matched_counterparty = find_matching_col(counterparty_aliases)
+    if matched_counterparty:
+        norm_df["counterparty"] = df[matched_counterparty].astype(str).str.strip()
+    else:
+        norm_df["counterparty"] = "Third_Party"
 
     # Txn ID
     if matched_id:
