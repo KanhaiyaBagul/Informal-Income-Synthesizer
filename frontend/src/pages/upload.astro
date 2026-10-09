@@ -1,0 +1,40 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import StatementUploader from '../components/react/StatementUploader';
+---
+
+<DashboardLayout
+  title="Upload Financial Statement"
+  activeNav="upload"
+  applicantName="New Applicant"
+  businessName="Micro-Enterprise"
+  statusBadge="AWAITING DATA"
+>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="pb-2">
+      <span class="text-xs uppercase font-mono tracking-wider text-neutral-400">Step 1 // Data Ingestion</span>
+      <h2 class="text-2xl font-bold text-white mt-0.5">Ingest Financial Statement or Select Preset</h2>
+      <p class="text-xs text-text-secondary mt-1 font-light max-w-3xl">
+        Upload 3–6 months of transaction records (UPI statement, bank export, or digital ledger CSV). Our engine normalizes raw receipts, isolates operational costs from personal transfers, and derives your verified Financial Health Score.
+      </p>
+    </div>
+
+    <!-- Requirements Card -->
+    <div class="p-4 bg-[#0A0A0A] border border-[#222222] rounded-xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="w-8 h-8 rounded-lg bg-[#141414] border border-[#262626] flex items-center justify-center text-sm font-mono text-white">ⓘ</span>
+        <div>
+          <p class="font-semibold text-white">Required CSV Columns:</p>
+          <p class="text-neutral-400 font-mono text-[11px]">date, amount, direction (CREDIT / DEBIT)</p>
+        </div>
+      </div>
+      <div class="text-[11px] text-neutral-400 font-mono">
+        Optional: category, description, txn_id
+      </div>
+    </div>
+
+    <!-- Interactive Uploader Island -->
+    <StatementUploader client:load />
+  </div>
+</DashboardLayout>

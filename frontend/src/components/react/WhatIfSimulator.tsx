@@ -6,10 +6,10 @@ export default function WhatIfSimulator() {
   const base = PRESETS[activePersona];
 
   // Sliders for delta
-  const [deltaExpense, setDeltaExpense] = useState<number>(-4000); // e.g. reduce expenses
-  const [deltaGross, setDeltaGross] = useState<number>(3000); // e.g. boost sales
-  const [deltaEmi, setDeltaEmi] = useState<number>(-1000); // e.g. pay off debt
-  const [deltaReserve, setDeltaReserve] = useState<number>(5000); // add to savings
+  const [deltaExpense, setDeltaExpense] = useState<number>(-4000);
+  const [deltaGross, setDeltaGross] = useState<number>(3000);
+  const [deltaEmi, setDeltaEmi] = useState<number>(-1000);
+  const [deltaReserve, setDeltaReserve] = useState<number>(5000);
 
   // Base state
   const baseGross = base.gross;
@@ -42,17 +42,17 @@ export default function WhatIfSimulator() {
   return (
     <div className="space-y-8">
       {/* Persona Toggle Row */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-[#16181D] border border-[#22252B] rounded-2xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-[#0E0E0E] border border-[#222222] rounded-2xl">
         <div>
-          <span className="text-xs font-mono uppercase text-lime">Sandboxed Environment</span>
+          <span className="text-xs font-mono uppercase text-neutral-400">Sandboxed Environment</span>
           <h2 className="text-lg font-bold text-white mt-0.5">Select Baseline Profile to Simulate</h2>
         </div>
 
-        <div className="inline-flex p-1 bg-[#0A0B0D] rounded-full border border-[#22252B]">
+        <div className="inline-flex p-1 bg-black rounded-full border border-[#262626]">
           <button
             onClick={() => setActivePersona('ramesh')}
             className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all ${
-              activePersona === 'ramesh' ? 'bg-lime text-black font-semibold' : 'text-text-secondary hover:text-white'
+              activePersona === 'ramesh' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
             }`}
           >
             Ramesh (Chai Stall)
@@ -60,7 +60,7 @@ export default function WhatIfSimulator() {
           <button
             onClick={() => setActivePersona('priya')}
             className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all ${
-              activePersona === 'priya' ? 'bg-lime text-black font-semibold' : 'text-text-secondary hover:text-white'
+              activePersona === 'priya' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
             }`}
           >
             Priya (Delivery Partner)
@@ -68,7 +68,7 @@ export default function WhatIfSimulator() {
           <button
             onClick={() => setActivePersona('arun')}
             className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all ${
-              activePersona === 'arun' ? 'bg-lime text-black font-semibold' : 'text-text-secondary hover:text-white'
+              activePersona === 'arun' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
             }`}
           >
             Arun (Carpenter)
@@ -79,17 +79,17 @@ export default function WhatIfSimulator() {
       {/* Main Grid: Controls on left, Side-by-Side Comparison on right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Interactive Delta Sliders */}
-        <div className="lg:col-span-6 bg-[#16181D] border border-[#22252B] rounded-2xl p-6 space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-[#22252B]">
+        <div className="lg:col-span-6 bg-[#0E0E0E] border border-[#222222] rounded-2xl p-6 space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-[#222222]">
             <h3 className="text-sm font-bold text-white">Hypothetical Levers</h3>
-            <span className="text-xs text-lime font-mono">Zero Mutation Guarantee</span>
+            <span className="text-xs text-neutral-400 font-mono">Zero Mutation Guarantee</span>
           </div>
 
           {/* Slider 1: Expenses */}
           <div>
             <div className="flex justify-between text-xs mb-2">
-              <span className="text-text-secondary">Trim / Increase Monthly Expenses</span>
-              <span className={`num-mono font-bold ${deltaExpense <= 0 ? 'text-positive' : 'text-negative'}`}>
+              <span className="text-neutral-400">Trim / Increase Monthly Expenses</span>
+              <span className="num-mono font-bold text-white">
                 {deltaExpense >= 0 ? '+' : ''}₹{deltaExpense.toLocaleString()}
               </span>
             </div>
@@ -100,9 +100,9 @@ export default function WhatIfSimulator() {
               step="500"
               value={deltaExpense}
               onChange={(e) => setDeltaExpense(Number(e.target.value))}
-              className="w-full h-1.5 bg-[#22252B] rounded-lg appearance-none cursor-pointer accent-lime"
+              className="w-full h-1 bg-[#262626] rounded-lg appearance-none cursor-pointer accent-white"
             />
-            <div className="flex justify-between text-[11px] text-text-muted mt-1">
+            <div className="flex justify-between text-[11px] text-neutral-500 mt-1 font-mono">
               <span>-₹10,000 (Savings)</span>
               <span>+₹10,000 (Cost spike)</span>
             </div>
@@ -111,8 +111,8 @@ export default function WhatIfSimulator() {
           {/* Slider 2: Gross Receipts */}
           <div>
             <div className="flex justify-between text-xs mb-2">
-              <span className="text-text-secondary">Expand Monthly Digital UPI Sales</span>
-              <span className={`num-mono font-bold ${deltaGross >= 0 ? 'text-positive' : 'text-negative'}`}>
+              <span className="text-neutral-400">Expand Monthly Digital UPI Sales</span>
+              <span className="num-mono font-bold text-white">
                 {deltaGross >= 0 ? '+' : ''}₹{deltaGross.toLocaleString()}
               </span>
             </div>
@@ -123,9 +123,9 @@ export default function WhatIfSimulator() {
               step="1000"
               value={deltaGross}
               onChange={(e) => setDeltaGross(Number(e.target.value))}
-              className="w-full h-1.5 bg-[#22252B] rounded-lg appearance-none cursor-pointer accent-lime"
+              className="w-full h-1 bg-[#262626] rounded-lg appearance-none cursor-pointer accent-white"
             />
-            <div className="flex justify-between text-[11px] text-text-muted mt-1">
+            <div className="flex justify-between text-[11px] text-neutral-500 mt-1 font-mono">
               <span>-₹10,000 (Downturn)</span>
               <span>+₹20,000 (Growth)</span>
             </div>
@@ -134,9 +134,9 @@ export default function WhatIfSimulator() {
           {/* Slider 3: EMI Paydown */}
           <div>
             <div className="flex justify-between text-xs mb-2">
-              <span className="text-text-secondary">Pay Down Monthly Loan EMI</span>
-              <span className={`num-mono font-bold ${deltaEmi <= 0 ? 'text-positive' : 'text-negative'}`}>
-                {deltaEmi >= 0 ? '+' : ''}₹{deltaEmi.toLocaleString()}
+              <span className="text-neutral-400">Pay Down Monthly Loan EMI</span>
+              <span className="num-mono font-bold text-white">
+                {deltaEmi <= 0 ? '' : '+'}₹{deltaEmi.toLocaleString()}
               </span>
             </div>
             <input
@@ -146,9 +146,9 @@ export default function WhatIfSimulator() {
               step="500"
               value={deltaEmi}
               onChange={(e) => setDeltaEmi(Number(e.target.value))}
-              className="w-full h-1.5 bg-[#22252B] rounded-lg appearance-none cursor-pointer accent-lime"
+              className="w-full h-1 bg-[#262626] rounded-lg appearance-none cursor-pointer accent-white"
             />
-            <div className="flex justify-between text-[11px] text-text-muted mt-1">
+            <div className="flex justify-between text-[11px] text-neutral-500 mt-1 font-mono">
               <span>Pay off full EMI</span>
               <span>+₹5,000 new EMI</span>
             </div>
@@ -157,8 +157,8 @@ export default function WhatIfSimulator() {
           {/* Slider 4: Emergency Reserve */}
           <div>
             <div className="flex justify-between text-xs mb-2">
-              <span className="text-text-secondary">Add to Emergency Liquidity Buffer</span>
-              <span className="num-mono font-bold text-positive">
+              <span className="text-neutral-400">Add to Emergency Liquidity Buffer</span>
+              <span className="num-mono font-bold text-white">
                 +₹{deltaReserve.toLocaleString()}
               </span>
             </div>
@@ -169,9 +169,9 @@ export default function WhatIfSimulator() {
               step="1000"
               value={deltaReserve}
               onChange={(e) => setDeltaReserve(Number(e.target.value))}
-              className="w-full h-1.5 bg-[#22252B] rounded-lg appearance-none cursor-pointer accent-lime"
+              className="w-full h-1 bg-[#262626] rounded-lg appearance-none cursor-pointer accent-white"
             />
-            <div className="flex justify-between text-[11px] text-text-muted mt-1">
+            <div className="flex justify-between text-[11px] text-neutral-500 mt-1 font-mono">
               <span>₹0</span>
               <span>+₹25,000 Reserve</span>
             </div>
@@ -195,31 +195,29 @@ export default function WhatIfSimulator() {
         <div className="lg:col-span-6 space-y-6">
           <div className="grid grid-cols-2 gap-4">
             {/* Baseline Card */}
-            <div className="bg-[#121316] border border-[#22252B] rounded-2xl p-6">
-              <span className="text-[11px] font-mono text-text-muted uppercase">Official Baseline</span>
-              <p className="num-mono text-4xl font-extrabold text-white mt-2">{baseFhs}<span className="text-xs text-text-muted font-normal">/100</span></p>
-              <p class="text-xs text-text-secondary mt-1">Net Surplus: ₹{baseSurplus.toLocaleString()}</p>
-              <div className="mt-4 pt-4 border-t border-[#22252B] text-xs">
-                <span className="text-text-muted">Repayment Prob:</span>
+            <div className="bg-[#0A0A0A] border border-[#222222] rounded-2xl p-6">
+              <span className="text-[11px] font-mono text-neutral-500 uppercase">Official Baseline</span>
+              <p className="num-mono text-4xl font-extrabold text-white mt-2">{baseFhs}<span className="text-xs text-neutral-500 font-normal">/100</span></p>
+              <p className="text-xs text-neutral-400 mt-1 font-mono">Surplus: ₹{baseSurplus.toLocaleString()}</p>
+              <div className="mt-4 pt-4 border-t border-[#222222] text-xs">
+                <span className="text-neutral-500">Repayment Prob:</span>
                 <p className="num-mono font-bold text-white mt-0.5">{baseProb}%</p>
               </div>
             </div>
 
             {/* Simulated Card */}
-            <div className="bg-[#16181D] border border-lime/40 rounded-2xl p-6 relative overflow-hidden shadow-lime-glow">
+            <div className="bg-[#121212] border border-white/30 rounded-2xl p-6 relative overflow-hidden shadow-card-subtle">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono text-lime uppercase font-semibold">Simulated State</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                  fhsDelta >= 0 ? 'bg-positive/20 text-positive' : 'bg-negative/20 text-negative'
-                }`}>
+                <span className="text-[11px] font-mono text-white uppercase font-semibold">Simulated State</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-white text-black">
                   {fhsDelta >= 0 ? '+' : ''}{fhsDelta} PTS
                 </span>
               </div>
-              <p className="num-mono text-4xl font-extrabold text-lime mt-2">{simFhs}<span className="text-xs text-text-muted font-normal">/100</span></p>
-              <p className="text-xs text-white mt-1">New Surplus: ₹{simSurplus.toLocaleString()}</p>
-              <div className="mt-4 pt-4 border-t border-[#22252B] text-xs">
-                <span className="text-text-muted">Simulated Prob:</span>
-                <p className="num-mono font-bold text-lime mt-0.5">
+              <p className="num-mono text-4xl font-extrabold text-white mt-2">{simFhs}<span className="text-xs text-neutral-500 font-normal">/100</span></p>
+              <p className="text-xs text-neutral-300 mt-1 font-mono">New Surplus: ₹{simSurplus.toLocaleString()}</p>
+              <div className="mt-4 pt-4 border-t border-[#222222] text-xs">
+                <span className="text-neutral-500">Simulated Prob:</span>
+                <p className="num-mono font-bold text-white mt-0.5">
                   {simProb}% ({probDelta >= 0 ? '+' : ''}{probDelta}%)
                 </p>
               </div>
@@ -227,13 +225,13 @@ export default function WhatIfSimulator() {
           </div>
 
           {/* Actionable Insights Panel */}
-          <div className="bg-[#16181D] border border-[#22252B] rounded-2xl p-6 space-y-3">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Simulation Analysis</h4>
-            <div className="space-y-2 text-xs text-text-secondary">
+          <div className="bg-[#0E0E0E] border border-[#222222] rounded-2xl p-6 space-y-3">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Simulation Analysis</h4>
+            <div className="space-y-2 text-xs text-neutral-300 font-light">
               <p>
                 • {deltaExpense < 0
                   ? `Reducing business expenses by ₹${Math.abs(deltaExpense).toLocaleString()} directly widens your operating margin to ${(surplusRatio * 100).toFixed(1)}%.`
-                  : 'Operating expenses remain steady with baseline.'}
+                  : 'Operating expenses modeled at baseline level.'}
               </p>
               <p>
                 • {deltaGross > 0
@@ -247,7 +245,7 @@ export default function WhatIfSimulator() {
               </p>
             </div>
 
-            <div className="pt-3 border-t border-[#22252B] text-[11px] text-text-muted italic">
+            <div className="pt-3 border-t border-[#222222] text-[11px] text-neutral-500 italic">
               Disclaimer: Simulator calculations are for financial empowerment and educational exploration. They do not alter your official saved assessment or guarantee formal loan approvals.
             </div>
           </div>
