@@ -175,18 +175,28 @@ const {
       </header>
 
       <script is:inline>
+        function updateSidebarUser(data) {
+          if (!data) return;
+          const nameEl = document.getElementById('sidebar-user-name');
+          const bizEl = document.getElementById('sidebar-user-biz');
+          const avEl = document.getElementById('sidebar-user-avatar');
+          if (nameEl && data.applicant_name) nameEl.textContent = data.applicant_name;
+          if (bizEl && data.business_name) bizEl.textContent = data.business_name;
+          if (avEl && data.applicant_name) avEl.textContent = data.applicant_name.charAt(0);
+        }
+
         try {
           const cached = localStorage.getItem('equiscore_current_assessment');
           if (cached) {
-            const data = JSON.parse(cached);
-            const nameEl = document.getElementById('sidebar-user-name');
-            const bizEl = document.getElementById('sidebar-user-biz');
-            const avEl = document.getElementById('sidebar-user-avatar');
-            if (nameEl && data.applicant_name) nameEl.textContent = data.applicant_name;
-            if (bizEl && data.business_name) bizEl.textContent = data.business_name;
-            if (avEl && data.applicant_name) avEl.textContent = data.applicant_name.charAt(0);
+            updateSidebarUser(JSON.parse(cached));
           }
         } catch (e) {}
+
+        window.addEventListener('equiscore_assessment_updated', (e) => {
+          if (e && e.detail) {
+            updateSidebarUser(e.detail);
+          }
+        });
       </script>
 
       <!-- Page Content -->
