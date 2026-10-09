@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { PRESETS } from '../../lib/mockData';
 
 interface ActiveProfile {
   key: string;
@@ -13,88 +12,97 @@ interface ActiveProfile {
   fhs: number;
   prob: number;
   cv: number;
+  filename: string;
 }
 
 export default function WhatIfSimulator() {
-  const [profiles, setProfiles] = useState<Record<string, ActiveProfile>>({
-    ramesh: {
-      key: 'ramesh',
-      name: 'Ramesh Kumar',
-      business: 'Shree Balaji Chai Stall',
-      type: 'Street Food',
-      gross: 42912,
-      expenses: 22845,
-      surplus: 20067,
-      emi: 3200,
-      fhs: 82,
-      prob: 88.4,
-      cv: 0.11
-    },
-    priya: {
-      key: 'priya',
-      name: 'Priya Sharma',
-      business: 'Swiggy & Zomato Partner',
-      type: 'Gig Delivery',
-      gross: 28400,
-      expenses: 12800,
-      surplus: 15600,
-      emi: 2100,
-      fhs: 74,
-      prob: 79.2,
-      cv: 0.18
-    },
-    arun: {
-      key: 'arun',
-      name: 'Arun Verma',
-      business: 'Artisan Woodcraft',
-      type: 'Artisan Carpentry',
-      gross: 48000,
-      expenses: 34500,
-      surplus: 13500,
-      emi: 4500,
-      fhs: 61,
-      prob: 66.8,
-      cv: 0.38
-    }
+  const [profile, setProfile] = useState<ActiveProfile>({
+    key: 'arun',
+    name: 'Arun Verma',
+    business: 'Artisan Carpentry & Woodcraft',
+    type: 'Artisan Freelance',
+    gross: 32297,
+    expenses: 22069,
+    surplus: 10228,
+    emi: 4500,
+    fhs: 67,
+    prob: 66.9,
+    cv: 0.075,
+    filename: 'sample_volatile_freelancer_arun.csv'
   });
 
-  const [activeKey, setActiveKey] = useState<string>('ramesh');
+  const [activeKey, setActiveKey] = useState<string>('arun');
   const [hasCustomUploaded, setHasCustomUploaded] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  // Check for uploaded assessment in localStorage or query params
+  // Sliders for hypothetical deltas
+  const [deltaExpense, setDeltaExpense] = useState<number>(-3000);
+  const [deltaGross, setDeltaGross] = useState<number>(2500);
+  const [deltaEmi, setDeltaEmi] = useState<number>(-1000);
+  const [deltaReserve, setDeltaReserve] = useState<number>(5000);
+
+  const loadProfileFromData = (d: any, key: string) => {
+    const fn = key === 'arun' ? 'sample_volatile_freelancer_arun.csv' :
+               key === 'ramesh' ? 'sample_street_vendor_ramesh.csv' :
+               key === 'priya' ? 'sample_gig_delivery_priya.csv' : 'custom_uploaded_statement.csv';
+
+    setProfile({
+      key,
+      name: d.applicant_name,
+      business: d.business_name,
+      type: d.business_type.replace('_', ' '),
+      gross: Math.round(d.income_synthesis.average_monthly_gross_receipts),
+      expenses: Math.round(d.income_synthesis.average_monthly_expenses),
+      surplus: Math.round(d.income_synthesis.average_monthly_net_surplus),
+      emi: Math.round(d.income_synthesis.average_monthly_debt_emi || 0),
+      fhs: d.financial_health_score.overall_score,
+      prob: d.credit_risk_ml.repayment_probability_percent,
+      cv: Number(d.income_synthesis.income_volatility_cv.toFixed(3)),
+      filename: fn
+    });
+    setActiveKey(key);
+  };
+
+  const selectDataset = async (key: string) => {
+    setLoading(true);
+    if (key === 'uploaded') {
+      const cached = localStorage.getItem('equiscore_current_assessment');
+      if (cached) {
+        try {
+          loadProfileFromData(JSON.parse(cached), 'uploaded');
+        } catch (e) {}
+      }
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8000/api/assessments/${key}`);
+      if (res.ok) {
+        const d = await res.json();
+        loadProfileFromData(d, key);
+        localStorage.setItem('equiscore_current_assessment', JSON.stringify(d));
+        window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: d }));
+      }
+    } catch (e) {
+      console.warn("Could not fetch dataset for simulator", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const queryId = params.get('id');
-
-    const loadProfileFromData = (d: any) => {
-      const customProfile: ActiveProfile = {
-        key: 'uploaded',
-        name: d.applicant_name,
-        business: d.business_name,
-        type: d.business_type.replace('_', ' '),
-        gross: Math.round(d.income_synthesis.average_monthly_gross_receipts),
-        expenses: Math.round(d.income_synthesis.average_monthly_expenses),
-        surplus: Math.round(d.income_synthesis.average_monthly_net_surplus),
-        emi: Math.round(d.income_synthesis.average_monthly_debt_emi || 0),
-        fhs: d.financial_health_score.overall_score,
-        prob: d.credit_risk_ml.repayment_probability_percent,
-        cv: Number(d.income_synthesis.income_volatility_cv.toFixed(2))
-      };
-
-      setProfiles((prev) => ({
-        ...prev,
-        uploaded: customProfile
-      }));
-      setHasCustomUploaded(true);
-      setActiveKey('uploaded');
-    };
 
     if (queryId) {
       fetch(`http://localhost:8000/api/assessments/${queryId}`)
         .then(res => res.json())
         .then(d => {
-          loadProfileFromData(d);
+          loadProfileFromData(d, 'uploaded');
+          setHasCustomUploaded(true);
           localStorage.setItem('equiscore_current_assessment', JSON.stringify(d));
+          window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: d }));
         })
         .catch(err => console.warn('Could not fetch assessment for simulator', err));
       return;
@@ -104,28 +112,28 @@ export default function WhatIfSimulator() {
     if (cached) {
       try {
         const d = JSON.parse(cached);
-        loadProfileFromData(d);
-      } catch (err) {
-        console.warn('Could not load custom assessment in simulator', err);
-      }
+        if (d && d.applicant_name) {
+          const k = d.applicant_name.toLowerCase().includes('arun') ? 'arun' :
+                    d.applicant_name.toLowerCase().includes('ramesh') ? 'ramesh' :
+                    d.applicant_name.toLowerCase().includes('priya') ? 'priya' : 'uploaded';
+          loadProfileFromData(d, k);
+          if (k === 'uploaded') setHasCustomUploaded(true);
+          return;
+        }
+      } catch (err) {}
     }
+
+    // Default to Arun's CSV dataset
+    selectDataset('arun');
   }, []);
 
-  const base = profiles[activeKey] || profiles.ramesh;
-
-  // Sliders for delta
-  const [deltaExpense, setDeltaExpense] = useState<number>(-3000);
-  const [deltaGross, setDeltaGross] = useState<number>(2500);
-  const [deltaEmi, setDeltaEmi] = useState<number>(-1000);
-  const [deltaReserve, setDeltaReserve] = useState<number>(5000);
-
-  // Base metrics
-  const baseGross = base.gross;
-  const baseExpenses = base.expenses;
-  const baseSurplus = base.surplus;
-  const baseEmi = base.emi;
-  const baseFhs = base.fhs;
-  const baseProb = base.prob;
+  // Base metrics derived directly from the CSV
+  const baseGross = profile.gross;
+  const baseExpenses = profile.expenses;
+  const baseSurplus = profile.surplus;
+  const baseEmi = profile.emi;
+  const baseFhs = profile.fhs;
+  const baseProb = profile.prob;
 
   // Simulated state
   const simGross = Math.max(0, baseGross + deltaGross);
@@ -137,7 +145,7 @@ export default function WhatIfSimulator() {
   const surplusRatio = simGross > 0 ? (simSurplus / simGross) : 0;
   const debtRatio = simSurplus > 0 ? (simEmi / simSurplus) : 1.0;
   const p1 = Math.min(100, Math.max(0, (surplusRatio / 0.35) * 100)) * 0.30;
-  const p2 = (1.0 - Math.min(1.0, base.cv / 0.50)) * 100 * 0.25;
+  const p2 = (1.0 - Math.min(1.0, profile.cv / 0.50)) * 100 * 0.25;
   const p3 = Math.max(0, 100 - (debtRatio * 100)) * 0.20;
   const p4 = Math.min(100, Math.max(0, ((8000 + deltaReserve) / 10000) * 80)) * 0.15;
   const p5 = 85 * 0.10;
@@ -148,50 +156,54 @@ export default function WhatIfSimulator() {
   const simProb = Math.min(99.0, Math.max(30.0, Number((baseProb + probDelta).toFixed(1))));
 
   return (
-    <div className="space-y-8">
-      {/* Persona Toggle Row */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-[#0E0E0E] border border-[#222222] rounded-2xl">
+    <div className="space-y-6">
+      {/* File & Persona Selector Pill Row */}
+      <div className="p-4 bg-[#0A0A0A] border border-[#222222] rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-mono uppercase text-neutral-400">Sandboxed Environment</span>
-          <h2 className="text-base font-bold text-white mt-0.5">
-            Active Baseline: <span className="text-neutral-200">{base.name}</span> ({base.business})
+          <span className="text-[10px] font-mono uppercase text-neutral-400 block">Baseline Data Source</span>
+          <h2 className="text-sm font-bold text-white mt-0.5 font-mono">
+            backend/data/{profile.filename} ({profile.name})
           </h2>
         </div>
 
         <div className="inline-flex flex-wrap p-1 bg-black rounded-full border border-[#262626]">
           {hasCustomUploaded && (
             <button
-              onClick={() => setActiveKey('uploaded')}
-              className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all ${
-                activeKey === 'uploaded' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
+              type="button"
+              onClick={() => selectDataset('uploaded')}
+              className={`px-3 py-1.5 text-xs font-mono rounded-full transition-all cursor-pointer ${
+                activeKey === 'uploaded' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
               }`}
             >
-              ★ Uploaded Statement ({profiles.uploaded?.name.split(' ')[0]})
+              ★ Uploaded Statement
             </button>
           )}
           <button
-            onClick={() => setActiveKey('ramesh')}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all ${
-              activeKey === 'ramesh' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
+            type="button"
+            onClick={() => selectDataset('arun')}
+            className={`px-3 py-1.5 text-xs font-mono rounded-full transition-all cursor-pointer ${
+              activeKey === 'arun' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
             }`}
           >
-            Ramesh (Chai Stall)
+            📄 Arun (319 txns)
           </button>
           <button
-            onClick={() => setActiveKey('priya')}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all ${
-              activeKey === 'priya' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
+            type="button"
+            onClick={() => selectDataset('ramesh')}
+            className={`px-3 py-1.5 text-xs font-mono rounded-full transition-all cursor-pointer ${
+              activeKey === 'ramesh' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
             }`}
           >
-            Priya (Delivery)
+            📄 Ramesh (1,357 txns)
           </button>
           <button
-            onClick={() => setActiveKey('arun')}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all ${
-              activeKey === 'arun' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
+            type="button"
+            onClick={() => selectDataset('priya')}
+            className={`px-3 py-1.5 text-xs font-mono rounded-full transition-all cursor-pointer ${
+              activeKey === 'priya' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
             }`}
           >
-            Arun (Carpenter)
+            📄 Priya (749 txns)
           </button>
         </div>
       </div>
@@ -273,7 +285,7 @@ export default function WhatIfSimulator() {
             />
             <div className="flex justify-between text-[11px] text-neutral-500 mt-1 font-mono">
               <span>-₹{baseEmi.toLocaleString()} (Full Payoff)</span>
-              <span>+₹5,000 (New Equipment Loan)</span>
+              <span>+₹5,000 (New Loan)</span>
             </div>
           </div>
 
@@ -302,24 +314,25 @@ export default function WhatIfSimulator() {
 
           {/* Reset Button */}
           <button
+            type="button"
             onClick={() => {
               setDeltaExpense(0);
               setDeltaGross(0);
               setDeltaEmi(0);
               setDeltaReserve(0);
             }}
-            className="w-full btn-dark text-xs py-2.5"
+            className="w-full btn-dark text-xs py-2.5 cursor-pointer"
           >
             Reset All Sliders to Baseline
           </button>
         </div>
 
-        {/* Right Column: Side-by-Side Comparison (Baseline vs Simulated) */}
+        {/* Right Column: Side-by-Side Comparison */}
         <div className="lg:col-span-6 space-y-6">
           <div className="grid grid-cols-2 gap-4">
             {/* Baseline Card */}
             <div className="bg-[#0A0A0A] border border-[#222222] rounded-2xl p-6">
-              <span className="text-[11px] font-mono text-neutral-500 uppercase">Official Baseline</span>
+              <span className="text-[11px] font-mono text-neutral-500 uppercase">Verified CSV Baseline</span>
               <p className="num-mono text-4xl font-extrabold text-white mt-2">
                 {baseFhs}<span className="text-xs text-neutral-500 font-normal">/100</span>
               </p>

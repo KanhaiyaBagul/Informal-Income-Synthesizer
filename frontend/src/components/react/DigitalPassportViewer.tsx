@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { PRESETS } from '../../lib/mockData';
 
 interface PassportAssessment {
   assessment_id: string;
@@ -12,6 +11,7 @@ interface PassportAssessment {
     average_monthly_debt_emi: number;
     average_monthly_net_surplus: number;
     data_coverage_months: number;
+    total_tx_count?: number;
   };
   financial_health_score: {
     overall_score: number;
@@ -29,33 +29,65 @@ interface PassportAssessment {
 
 export default function DigitalPassportViewer() {
   const [data, setData] = useState<PassportAssessment>({
-    assessment_id: 'ASM_RAMESHKUMAR_01',
-    applicant_name: 'Ramesh Kumar',
-    business_name: 'Shree Balaji Chai Stall',
-    business_type: 'street_food',
+    assessment_id: 'ASM_ARUNVERMA_01',
+    applicant_name: 'Arun Verma',
+    business_name: 'Artisan Carpentry & Woodcraft',
+    business_type: 'artisan_freelance',
     income_synthesis: {
-      average_monthly_gross_receipts: 42912,
-      average_monthly_expenses: 22845,
-      average_monthly_debt_emi: 3200,
-      average_monthly_net_surplus: 20067,
-      data_coverage_months: 4
+      average_monthly_gross_receipts: 32297,
+      average_monthly_expenses: 22069,
+      average_monthly_debt_emi: 4500,
+      average_monthly_net_surplus: 10228,
+      data_coverage_months: 4,
+      total_tx_count: 319
     },
     financial_health_score: {
-      overall_score: 82,
-      health_band: 'Prime Stable Band',
-      strengths: ['Robust net operating margin', 'Consistent daily customer receipts', 'Well-managed debt burden']
+      overall_score: 67,
+      health_band: 'Resilient Band',
+      strengths: ['Verified digital milestone receipts', 'Active commercial banking volume']
     },
     credit_risk_ml: {
-      repayment_probability_percent: 88.4,
-      risk_tier: 'Tier 1 Low Default Risk'
+      repayment_probability_percent: 66.9,
+      risk_tier: 'Tier 2 Moderate Risk'
     },
     underwriting_decision: {
-      decision_status: 'PRE-APPROVED / ELIGIBLE'
+      decision_status: 'ELIGIBLE'
     }
   });
 
   const [hasCustom, setHasCustom] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>('ramesh');
+  const [activeTab, setActiveTab] = useState<string>('arun');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const selectPreset = async (key: string) => {
+    setActiveTab(key);
+    setLoading(true);
+
+    if (key === 'custom') {
+      const cached = localStorage.getItem('equiscore_current_assessment');
+      if (cached) {
+        try {
+          setData(JSON.parse(cached));
+        } catch (e) {}
+      }
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8000/api/assessments/${key}`);
+      if (res.ok) {
+        const d = await res.json();
+        setData(d);
+        localStorage.setItem('equiscore_current_assessment', JSON.stringify(d));
+        window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: d }));
+      }
+    } catch (e) {
+      console.warn("Could not fetch assessment for passport", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -69,6 +101,7 @@ export default function DigitalPassportViewer() {
           setHasCustom(true);
           setActiveTab('custom');
           localStorage.setItem('equiscore_current_assessment', JSON.stringify(parsed));
+          window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: parsed }));
         })
         .catch(e => console.warn('Failed to fetch assessment for passport', e));
       return;
@@ -78,50 +111,21 @@ export default function DigitalPassportViewer() {
     if (cached) {
       try {
         const parsed: PassportAssessment = JSON.parse(cached);
-        setData(parsed);
-        setHasCustom(true);
-        setActiveTab('custom');
-      } catch (e) {
-        console.warn('Failed to parse cached assessment for passport', e);
-      }
+        if (parsed && parsed.assessment_id) {
+          setData(parsed);
+          const k = parsed.applicant_name?.toLowerCase().includes('arun') ? 'arun' :
+                    parsed.applicant_name?.toLowerCase().includes('ramesh') ? 'ramesh' :
+                    parsed.applicant_name?.toLowerCase().includes('priya') ? 'priya' : 'custom';
+          setActiveTab(k);
+          if (k === 'custom') setHasCustom(true);
+          return;
+        }
+      } catch (e) {}
     }
+
+    // Default: fetch Arun's CSV assessment
+    selectPreset('arun');
   }, []);
-
-  const selectPreset = (key: string) => {
-    setActiveTab(key);
-    if (key === 'custom') {
-      const cached = localStorage.getItem('equiscore_current_assessment');
-      if (cached) setData(JSON.parse(cached));
-      return;
-    }
-
-    const p = PRESETS[key] || PRESETS.ramesh;
-    setData({
-      assessment_id: `ASM_${p.name.replace(/\s+/g, '').toUpperCase()}_01`,
-      applicant_name: p.name,
-      business_name: p.business,
-      business_type: p.type,
-      income_synthesis: {
-        average_monthly_gross_receipts: p.gross,
-        average_monthly_expenses: p.expenses,
-        average_monthly_debt_emi: p.emi,
-        average_monthly_net_surplus: p.surplus,
-        data_coverage_months: 4
-      },
-      financial_health_score: {
-        overall_score: p.fhs,
-        health_band: p.fhs >= 75 ? 'Prime Stable Band' : p.fhs >= 60 ? 'Moderate Buffer' : 'Caution Band',
-        strengths: ['Verified digital transaction history', 'Active cashflow turnover']
-      },
-      credit_risk_ml: {
-        repayment_probability_percent: p.prob,
-        risk_tier: p.tier
-      },
-      underwriting_decision: {
-        decision_status: p.decision
-      }
-    });
-  };
 
   const downloadUrl = `http://localhost:8000/api/reports/${data.assessment_id}/download`;
 
@@ -133,7 +137,7 @@ export default function DigitalPassportViewer() {
           <span className="text-xs uppercase font-mono tracking-wider text-neutral-400">Portable Credit Dossier</span>
           <h2 className="text-2xl font-bold text-white mt-0.5">Digital Financial Passport</h2>
           <p className="text-xs text-text-secondary mt-1 font-light">
-            An applicant-owned, tamper-evident financial dossier synthesized from consented digital statements.
+            An applicant-owned, tamper-evident financial dossier synthesized from real statement CSV records.
           </p>
         </div>
 
@@ -150,42 +154,46 @@ export default function DigitalPassportViewer() {
       </div>
 
       {/* Preset / Active Toggle Tabs */}
-      <div className="flex items-center justify-between p-3 bg-[#0E0E0E] border border-[#222222] rounded-2xl">
-        <span className="text-xs font-mono text-neutral-400">View Dossier For:</span>
-        <div className="inline-flex p-1 bg-black rounded-full border border-[#262626]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-[#0E0E0E] border border-[#222222] rounded-2xl">
+        <span className="text-xs font-mono text-neutral-400">Generate Passport For:</span>
+        <div className="inline-flex flex-wrap p-1 bg-black rounded-full border border-[#262626]">
           {hasCustom && (
             <button
+              type="button"
               onClick={() => selectPreset('custom')}
-              className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
-                activeTab === 'custom' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
+              className={`px-3 py-1 text-xs font-mono rounded-full transition-all cursor-pointer ${
+                activeTab === 'custom' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
               }`}
             >
               ★ Uploaded Statement
             </button>
           )}
           <button
-            onClick={() => selectPreset('ramesh')}
-            className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
-              activeTab === 'ramesh' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Ramesh
-          </button>
-          <button
-            onClick={() => selectPreset('priya')}
-            className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
-              activeTab === 'priya' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Priya
-          </button>
-          <button
+            type="button"
             onClick={() => selectPreset('arun')}
-            className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
-              activeTab === 'arun' ? 'bg-white text-black font-semibold' : 'text-neutral-400 hover:text-white'
+            className={`px-3 py-1 text-xs font-mono rounded-full transition-all cursor-pointer ${
+              activeTab === 'arun' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
             }`}
           >
-            Arun
+            📄 Arun (319 txns)
+          </button>
+          <button
+            type="button"
+            onClick={() => selectPreset('ramesh')}
+            className={`px-3 py-1 text-xs font-mono rounded-full transition-all cursor-pointer ${
+              activeTab === 'ramesh' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            📄 Ramesh (1,357 txns)
+          </button>
+          <button
+            type="button"
+            onClick={() => selectPreset('priya')}
+            className={`px-3 py-1 text-xs font-mono rounded-full transition-all cursor-pointer ${
+              activeTab === 'priya' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            📄 Priya (749 txns)
           </button>
         </div>
       </div>

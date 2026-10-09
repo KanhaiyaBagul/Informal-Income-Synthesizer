@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { PRESETS, MOCK_SHAP_RAMESH, MOCK_MONTHLY_TREND } from '../../lib/mockData';
 
 interface MonthlySummary {
   month_period: string;
@@ -15,16 +14,21 @@ interface ShapAttribution {
   feature_label: string;
   feature_value: number;
   shap_value: number;
-  value_formatted: string;
+  value_formatted?: string;
+  feature_value_formatted?: string;
+  impact_direction?: string;
 }
 
 interface RuleResult {
   rule_id: string;
   rule_name: string;
-  passed: boolean;
-  actual_value: any;
-  threshold_condition: string;
-  description: string;
+  is_passed?: boolean;
+  passed?: boolean;
+  actual_value_formatted?: string;
+  actual_value?: any;
+  target_threshold?: string;
+  threshold_condition?: string;
+  description?: string;
 }
 
 interface AssessmentData {
@@ -63,134 +67,127 @@ interface AssessmentData {
   };
   underwriting_decision: {
     decision_status: string;
-    rules_passed_count: number;
+    passed_count?: number;
+    rules_passed_count?: number;
     total_rules_count: number;
-    rule_results: RuleResult[];
-    reason_codes: string[];
-    actionable_recommendations: string[];
+    criteria_evaluated?: RuleResult[];
+    rule_results?: RuleResult[];
+    primary_reason_codes?: string[];
+    reason_codes?: string[];
+    actionable_next_steps?: string[];
+    actionable_recommendations?: string[];
   };
 }
 
 export default function LiveDashboard() {
   const [assessment, setAssessment] = useState<AssessmentData | null>(null);
+  const [activeSource, setActiveSource] = useState<string>('arun');
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Switch between CSV datasets
+  const switchCsvDataset = async (key: string) => {
+    setActiveSource(key);
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const res = await fetch(`http://localhost:8000/api/assessments/${key}`);
+      if (res.ok) {
+        const data: AssessmentData = await res.json();
+        setAssessment(data);
+        localStorage.setItem('equiscore_current_assessment', JSON.stringify(data));
+        window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: data }));
+      } else {
+        throw new Error(`Failed to load dataset: ${res.statusText}`);
+      }
+    } catch (e: any) {
+      setFetchError(e.message || "Could not load dataset from backend.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
+      setFetchError(null);
       const params = new URLSearchParams(window.location.search);
       const queryId = params.get('id');
       const queryPersona = params.get('persona');
 
-      // 1. Check if localStorage has active assessment and matches query ID
-      const cached = localStorage.getItem('equiscore_current_assessment');
-      if (cached) {
+      // 1. If explicit queryId is in URL, fetch that assessment directly from backend
+      if (queryId) {
         try {
-          const parsed: AssessmentData = JSON.parse(cached);
-          if (!queryId || parsed.assessment_id === queryId) {
-            setAssessment(parsed);
+          const res = await fetch(`http://localhost:8000/api/assessments/${queryId}`);
+          if (res.ok) {
+            const data: AssessmentData = await res.json();
+            setAssessment(data);
+            setActiveSource('custom');
+            localStorage.setItem('equiscore_current_assessment', JSON.stringify(data));
+            window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: data }));
             setLoading(false);
             return;
           }
         } catch (e) {
-          console.warn('Failed to parse cached assessment', e);
+          console.warn("Could not fetch queryId assessment", e);
         }
       }
 
-      // 2. Fetch assessment from backend API
-      const targetEndpoint = queryId 
-        ? `http://localhost:8000/api/assessments/${queryId}`
-        : queryPersona
-        ? `http://localhost:8000/api/assessments/${queryPersona}`
-        : `http://localhost:8000/api/assessments/latest`;
+      // 2. If explicit queryPersona is in URL, fetch that persona CSV from backend
+      if (queryPersona) {
+        try {
+          const res = await fetch(`http://localhost:8000/api/assessments/${queryPersona.toLowerCase()}`);
+          if (res.ok) {
+            const data: AssessmentData = await res.json();
+            setAssessment(data);
+            setActiveSource(queryPersona.toLowerCase());
+            localStorage.setItem('equiscore_current_assessment', JSON.stringify(data));
+            window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: data }));
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn("Could not fetch queryPersona assessment", e);
+        }
+      }
 
+      // 3. Check if localStorage has an active uploaded assessment with real ID
+      const cached = localStorage.getItem('equiscore_current_assessment');
+      if (cached) {
+        try {
+          const parsed: AssessmentData = JSON.parse(cached);
+          if (parsed && parsed.assessment_id && parsed.income_synthesis) {
+            setAssessment(parsed);
+            if (parsed.applicant_name?.toLowerCase().includes('arun')) setActiveSource('arun');
+            else if (parsed.applicant_name?.toLowerCase().includes('ramesh')) setActiveSource('ramesh');
+            else if (parsed.applicant_name?.toLowerCase().includes('priya')) setActiveSource('priya');
+            else setActiveSource('custom');
+            window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: parsed }));
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn("Failed to parse cached assessment", e);
+        }
+      }
+
+      // 4. Fallback: Fetch Arun's real CSV statement directly from backend
       try {
-        const res = await fetch(targetEndpoint);
+        const res = await fetch('http://localhost:8000/api/assessments/arun');
         if (res.ok) {
           const data: AssessmentData = await res.json();
           setAssessment(data);
+          setActiveSource('arun');
           localStorage.setItem('equiscore_current_assessment', JSON.stringify(data));
-          setLoading(false);
-          return;
+          window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: data }));
+        } else {
+          setFetchError("Unable to load financial assessment from backend.");
         }
-      } catch (err) {
-        console.warn('Backend fetch failed, falling back to preset', err);
+      } catch (err: any) {
+        setFetchError("Backend server offline. Please verify FastAPI is running at http://localhost:8000.");
+      } finally {
+        setLoading(false);
       }
-
-      // 3. Fallback to rich default preset (Ramesh)
-      const p = PRESETS[queryPersona?.toLowerCase() || 'ramesh'] || PRESETS.ramesh;
-      const fallbackData: AssessmentData = {
-        assessment_id: `ASM_${p.name.replace(/\s+/g, '').toUpperCase()}_01`,
-        applicant_name: p.name,
-        business_name: p.business,
-        business_type: p.type,
-        income_synthesis: {
-          average_monthly_gross_receipts: p.gross,
-          average_monthly_expenses: p.expenses,
-          average_monthly_debt_emi: p.emi,
-          average_monthly_net_surplus: p.surplus,
-          net_surplus_ratio: p.surplus / p.gross,
-          income_volatility_cv: p.cv,
-          min_observed_balance: 11500,
-          total_tx_count: 1357,
-          data_coverage_months: 4,
-          coverage_reliability_percent: 85,
-          monthly_trend: MOCK_MONTHLY_TREND.map((m) => ({
-            month_period: m.month,
-            gross_receipts: m.gross,
-            operating_expenses: m.expenses,
-            debt_emi_payments: 3200,
-            net_operating_surplus: m.surplus,
-            customer_tx_count: 315
-          })),
-          anomaly_flags: []
-        },
-        financial_health_score: {
-          overall_score: p.fhs,
-          health_band: 'Prime Stable Band',
-          pillar_scores: {
-            cashflow_surplus: 26.5,
-            income_consistency: 22.0,
-            debt_to_surplus: 17.5,
-            liquidity_reserve: 12.0,
-            documentation_coverage: 7.0
-          },
-          strengths: ['Robust net operating margin', 'Consistent daily customer receipts', 'Well-managed debt burden'],
-          risk_factors: []
-        },
-        credit_risk_ml: {
-          repayment_probability_percent: p.prob,
-          default_probability_percent: Number((100 - p.prob).toFixed(1)),
-          risk_tier: p.tier,
-          model_version: 'Calibrated XGBoost-AltCredit-v1.0',
-          baseline_expected_probability: 61.5,
-          attributions: MOCK_SHAP_RAMESH.map((a) => ({
-            feature_name: a.feature_label.toLowerCase().replace(/\s+/g, '_'),
-            feature_label: a.feature_label,
-            feature_value: 0,
-            shap_value: a.shap_value,
-            value_formatted: a.value_formatted
-          }))
-        },
-        underwriting_decision: {
-          decision_status: p.decision,
-          rules_passed_count: 5,
-          total_rules_count: 5,
-          rule_results: [
-            { rule_id: 'R1', rule_name: 'Minimum Monthly Surplus', passed: true, actual_value: `₹${p.surplus.toLocaleString()}`, threshold_condition: '>= ₹6,000/mo', description: 'Borrower net cashflow demonstrates viable debt-service capability.' },
-            { rule_id: 'R2', rule_name: 'Composite FHS Score Threshold', passed: true, actual_value: `${p.fhs}/100`, threshold_condition: '>= 65/100', description: 'Deterministic 5-pillar health score exceeds underwriting barrier.' },
-            { rule_id: 'R3', rule_name: 'Debt Burden Ratio', passed: true, actual_value: `${((p.emi / p.surplus) * 100).toFixed(1)}%`, threshold_condition: '<= 50% of surplus', description: 'Current debt commitments remain well within repayment margin.' },
-            { rule_id: 'R4', rule_name: 'Statement Duration', passed: true, actual_value: '4 mos', threshold_condition: '>= 3 months', description: 'Data window verifies sustained informal commercial activity.' },
-            { rule_id: 'R5', rule_name: 'Alternative ML Confidence', passed: true, actual_value: `${p.prob}%`, threshold_condition: '>= 60.0% probability', description: 'Calibrated XGBoost prediction warrants favorable risk tier.' }
-          ],
-          reason_codes: ['EXP_SURPLUS_HEALTHY', 'STABLE_CASHFLOW_CV', 'ADEQUATE_DOCUMENTATION_DEPTH'],
-          actionable_recommendations: ['Maintain current daily UPI banking discipline', 'Eligible for pre-approved working capital loan up to ₹250,000']
-        }
-      };
-
-      setAssessment(fallbackData);
-      setLoading(false);
     }
 
     loadData();
@@ -200,15 +197,21 @@ export default function LiveDashboard() {
     return (
       <div className="py-24 flex flex-col items-center justify-center space-y-4">
         <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
-        <p className="text-sm font-mono text-neutral-400">Loading verified financial assessment...</p>
+        <p className="text-sm font-mono text-neutral-400">Loading verified CSV assessment from backend engine...</p>
       </div>
     );
   }
 
-  if (!assessment) {
+  if (fetchError || !assessment) {
     return (
-      <div className="py-16 text-center text-neutral-400 font-mono text-sm">
-        Assessment data could not be loaded. Please <a href="/upload" className="text-white underline">upload a statement</a>.
+      <div className="py-16 text-center space-y-4">
+        <p className="text-neutral-400 font-mono text-sm">{fetchError || "Assessment data could not be loaded."}</p>
+        <button
+          onClick={() => switchCsvDataset('arun')}
+          className="btn-white text-xs py-2 px-4 shadow-white-glow"
+        >
+          Retry with sample_volatile_freelancer_arun.csv
+        </button>
       </div>
     );
   }
@@ -217,8 +220,70 @@ export default function LiveDashboard() {
   const isEligible = underwriting_decision.decision_status.includes('ELIGIBLE') || underwriting_decision.decision_status.includes('PRE-APPROVED');
   const operatingMargin = ((income_synthesis.average_monthly_net_surplus / Math.max(1, income_synthesis.average_monthly_gross_receipts)) * 100).toFixed(1);
 
+  const activeFilename = 
+    activeSource === 'arun' ? 'sample_volatile_freelancer_arun.csv' :
+    activeSource === 'ramesh' ? 'sample_street_vendor_ramesh.csv' :
+    activeSource === 'priya' ? 'sample_gig_delivery_priya.csv' :
+    'custom_uploaded_statement.csv';
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Active CSV Dataset Selector Bar */}
+      <div className="p-4 bg-[#0A0A0A] border border-[#222222] rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+          <div>
+            <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider block">Active CSV Statement Source</span>
+            <p className="text-xs font-bold text-white mt-0.5 font-mono">
+              backend/data/{activeFilename} • <strong className="text-white">{income_synthesis.total_tx_count.toLocaleString()} real rows</strong>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-neutral-500 font-mono hidden md:inline">Switch File:</span>
+          <button
+            type="button"
+            onClick={() => switchCsvDataset('arun')}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+              activeSource === 'arun'
+                ? 'bg-white text-black font-bold shadow-sm'
+                : 'bg-[#141414] text-neutral-400 hover:text-white border border-[#262626]'
+            }`}
+          >
+            📄 Arun (319 txns)
+          </button>
+          <button
+            type="button"
+            onClick={() => switchCsvDataset('ramesh')}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+              activeSource === 'ramesh'
+                ? 'bg-white text-black font-bold shadow-sm'
+                : 'bg-[#141414] text-neutral-400 hover:text-white border border-[#262626]'
+            }`}
+          >
+            📄 Ramesh (1,357 txns)
+          </button>
+          <button
+            type="button"
+            onClick={() => switchCsvDataset('priya')}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer ${
+              activeSource === 'priya'
+                ? 'bg-white text-black font-bold shadow-sm'
+                : 'bg-[#141414] text-neutral-400 hover:text-white border border-[#262626]'
+            }`}
+          >
+            📄 Priya (749 txns)
+          </button>
+          <a
+            href="/upload"
+            className="px-3 py-1.5 rounded-full text-xs font-mono bg-black text-white hover:border-white border border-[#333333] transition-all flex items-center gap-1"
+          >
+            <span>⬆</span> Upload CSV
+          </a>
+        </div>
+      </div>
+
       {/* Welcome & Profile Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
         <div>
@@ -245,7 +310,7 @@ export default function LiveDashboard() {
             Status: <strong>{underwriting_decision.decision_status}</strong>
           </span>
           <a href="/upload" className="btn-dark text-xs py-1.5 px-3">
-            Upload Another Data
+            Upload Another Statement
           </a>
           <a 
             href={`http://localhost:8000/api/reports/${assessment.assessment_id}/download`} 
@@ -258,7 +323,7 @@ export default function LiveDashboard() {
         </div>
       </div>
 
-      {/* Monochrome Top Metric Cards Row */}
+      {/* Top 5 Key Metric Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Card 1: FHS Score */}
         <div className="card-mono flex flex-col justify-between">
@@ -333,16 +398,16 @@ export default function LiveDashboard() {
           </div>
           <div>
             <p className="num-mono text-3xl font-extrabold text-white">
-              {income_synthesis.income_volatility_cv.toFixed(2)}
+              {income_synthesis.income_volatility_cv.toFixed(3)}
             </p>
             <p className="text-[11px] text-neutral-300 font-semibold mt-1">
-              {income_synthesis.income_volatility_cv < 0.25 ? 'High Cashflow Stability' : 'Moderate Volatility'}
+              {income_synthesis.income_volatility_cv < 0.20 ? 'High Cashflow Stability' : 'Moderate Volatility'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Reconstructed Monthly Cashflow Ledger (Monochrome Data Table Style) */}
+      {/* Reconstructed Monthly Cashflow Ledger */}
       <div className="bg-[#0E0E0E] border border-[#222222] rounded-2xl overflow-hidden shadow-card-subtle">
         <div className="p-6 border-b border-[#222222] flex items-center justify-between">
           <div>
@@ -353,7 +418,7 @@ export default function LiveDashboard() {
               </span>
             </h3>
             <p className="text-xs text-neutral-400 mt-0.5 font-light">
-              Synthesized from normalized customer digital receipts and supplier expense debits.
+              Aggregated from verified transactions in {activeFilename}.
             </p>
           </div>
           <a 
@@ -395,7 +460,7 @@ export default function LiveDashboard() {
                       <td className="py-4 px-6 text-neutral-300">{margin}%</td>
                       <td className="py-4 px-6">
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/10 text-white border border-white/20">
-                          VERIFIED
+                          VERIFIED CSV
                         </span>
                       </td>
                     </tr>
@@ -427,7 +492,7 @@ export default function LiveDashboard() {
             </div>
 
             <p className="text-xs text-neutral-400 my-4 font-light">
-              Visualizing the directional impact of alternative cashflow features against the baseline model expectation.
+              Directional impact of {assessment.applicant_name}'s alternative cashflow features against the baseline model expectation.
             </p>
 
             {/* Attributions List */}
@@ -436,14 +501,13 @@ export default function LiveDashboard() {
                 credit_risk_ml.attributions.map((a) => {
                   const isPos = a.shap_value >= 0;
                   const pct = Math.min(100, Math.round(Math.abs(a.shap_value) * 100));
+                  const displayVal = (a as any).feature_value_formatted || a.value_formatted || a.feature_value;
                   return (
                     <div key={a.feature_name || a.feature_label} className="p-3 rounded-xl bg-black border border-[#222222]">
                       <div className="flex items-center justify-between text-xs mb-1.5">
                         <span className="font-semibold text-white">{a.feature_label}</span>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-neutral-500">
-                            {(a as any).feature_value_formatted || a.value_formatted || a.feature_value}
-                          </span>
+                          <span className="font-mono text-neutral-500">{displayVal}</span>
                           <span className="num-mono font-bold text-white">
                             {isPos ? '+' : ''}{a.shap_value.toFixed(3)}
                           </span>
@@ -465,7 +529,7 @@ export default function LiveDashboard() {
           </div>
 
           <div className="mt-6 pt-4 border-t border-[#222222] text-xs text-neutral-500 font-mono">
-            Baseline Expectation: <strong className="text-white">{credit_risk_ml.baseline_expected_probability || 61.5}%</strong> • Calibrated Score: <strong className="text-white">{credit_risk_ml.repayment_probability_percent}%</strong>
+            Baseline Expectation: <strong className="text-white">{credit_risk_ml.baseline_expected_probability || 61.5}%</strong> • Calibrated Prediction: <strong className="text-white">{credit_risk_ml.repayment_probability_percent}%</strong>
           </div>
         </div>
 
