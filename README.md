@@ -1,1500 +1,532 @@
 # Explainable Alternative Credit Scoring & Informal Income Synthesizer
 
-> **Project type:** FinTech / Alternative Credit Scoring / Explainable
-> AI (XAI)\
-> **Project status:** Planning and prototype blueprint\
-> **Primary goal:** Help micro-entrepreneurs, street vendors,
-> freelancers, and gig workers present a more complete picture of their
-> financial health when they do not have conventional salary slips or
-> extensive credit histories.
+> A loan-officer portal that scores borrowers with **no payslip and no credit-bureau history**, using everyday financial behaviour, and explains **every decision** in plain language.
 
-------------------------------------------------------------------------
+![Status](https://img.shields.io/badge/status-prototype%20in%20development-orange)
+![Domain](https://img.shields.io/badge/domain-FinTech%20%7C%20XAI-blue)
+![Data](https://img.shields.io/badge/data-synthetic%20only-lightgrey)
+
+---
 
 ## Table of Contents
 
-1.  [Project Overview](#1-project-overview)
-2.  [Problem Statement](#2-problem-statement)
-3.  [Vision and Objectives](#3-vision-and-objectives)
-4.  [Target Users](#4-target-users)
-5.  [Core Features](#5-core-features)
-    -   [Financial Health Score](#51-financial-health-score)
-    -   [AI-Powered Explanation](#52-ai-powered-explanation)
-    -   [AI Fairness and Bias Checker](#53-ai-fairness-and-bias-checker)
-    -   [SHAP Explanation Dashboard](#54-shap-explanation-dashboard)
-    -   [What-If Financial Simulator](#55-what-if-financial-simulator)
-    -   [Transparent Approval and Rejection
-        Reasons](#56-transparent-approval-and-rejection-reasons)
-    -   [Digital Financial Passport](#57-digital-financial-passport)
-    -   [Informal Income Synthesizer](#58-informal-income-synthesizer)
-6.  [End-to-End Application
-    Workflow](#6-end-to-end-application-workflow)
-7.  [User Interface and Page
-    Structure](#7-user-interface-and-page-structure)
-8.  [Technology Stack](#8-technology-stack)
-9.  [System Architecture](#9-system-architecture)
-10. [Frontend Implementation Plan](#10-frontend-implementation-plan)
-11. [Backend Modules and
-    Responsibilities](#11-backend-modules-and-responsibilities)
-12. [Proposed API Design](#12-proposed-api-design)
-13. [Database Design](#13-database-design)
-14. [Machine-Learning Strategy](#14-machine-learning-strategy)
-15. [Data Requirements and
-    Processing](#15-data-requirements-and-processing)
-16. [Security, Privacy, Fairness, and Responsible
-    Use](#16-security-privacy-fairness-and-responsible-use)
-17. [Suggested Project Structure](#17-suggested-project-structure)
-18. [Development Roadmap](#18-development-roadmap)
-19. [Testing and Acceptance
-    Criteria](#19-testing-and-acceptance-criteria)
-20. [Local Development Setup](#20-local-development-setup)
-21. [Demo Scenario](#21-demo-scenario)
-22. [Limitations and Future
-    Enhancements](#22-limitations-and-future-enhancements)
-23. [Glossary](#23-glossary)
+1. [Overview](#1-overview)
+2. [Problem Statement](#2-problem-statement)
+3. [Objectives](#3-objectives)
+4. [Users](#4-users)
+5. [Features](#5-features)
+6. [Workflow](#6-workflow)
+7. [Portal Screens](#7-portal-screens)
+8. [Architecture](#8-architecture)
+9. [Tech Stack](#9-tech-stack)
+10. [API Design](#10-api-design)
+11. [Data Model](#11-data-model)
+12. [Machine-Learning Strategy](#12-machine-learning-strategy)
+13. [Grounded AI Chatbot](#13-grounded-ai-chatbot)
+14. [Security, Privacy and Responsible Use](#14-security-privacy-and-responsible-use)
+15. [Project Structure](#15-project-structure)
+16. [Roadmap](#16-roadmap)
+17. [Testing and Acceptance Criteria](#17-testing-and-acceptance-criteria)
+18. [Local Setup](#18-local-setup)
+19. [Demo Scenario](#19-demo-scenario)
+20. [Limitations and Future Work](#20-limitations-and-future-work)
+21. [Glossary](#21-glossary)
+22. [Team and License](#22-team-and-license)
 
-------------------------------------------------------------------------
+---
 
-## 1. Project Overview
+## 1. Overview
 
-**Explainable Alternative Credit Scoring & Informal Income Synthesizer**
-is a financial assessment platform designed to help people whose
-earnings may not fit a conventional salaried-employment model. Examples
-include small shop owners, street vendors, self-employed workers, gig
-workers, freelancers, and micro-entrepreneurs.
+Street vendors, gig workers, freelancers and small shop owners often have no payslips and no credit history, so banks reject them. Modern alternative-data models can score them, but most are black boxes that cannot give the reasons a lender is expected to provide when denying credit.
 
-The platform processes consented financial information, estimates
-informal income from available evidence, calculates a Financial Health
-Score, and---when suitable labelled data and a validated model are
-available---estimates credit risk. It then explains the results,
-provides model-level fairness audit information, enables hypothetical
-financial simulations, presents transparent assessment or eligibility
-reasons, and generates a downloadable Digital Financial Passport.
+This project builds a **lending risk portal** where a loan officer uploads a borrower's transaction logs and receives:
 
-The application is intended to make financial assessments **more
-understandable, traceable, and useful**. It is not intended to guarantee
-loan approval or replace the final decision of an authorized lender.
+- an alternative credit score and default-risk probability,
+- a visual breakdown of which behaviours raised or lowered the score,
+- a plain-language, multilingual explanation,
+- a recorded decision with reasons and an audit trail.
 
-### Core idea
+### Four outputs, kept separate
 
-The system should not simply show a number. It should answer:
+| Output | Meaning |
+|---|---|
+| **Financial Health Score** | A documented 0 to 100 indicator of financial stability (cash flow, income consistency, bill-payment regularity). |
+| **Credit Risk Estimate** | A model-estimated probability of default over a defined period. |
+| **Eligibility Assessment** | Model output compared against configured criteria. |
+| **Lending Decision** | Made by the authorised loan officer. The platform supports it, it does not replace it. |
 
--   What does the available financial data indicate?
--   How was the Financial Health Score calculated?
--   What is the estimated income, and how reliable is that estimate?
--   Which features contributed to the credit-risk model's prediction?
--   Has the model been evaluated for potential group disparities?
--   How might hypothetical financial changes affect the model's output?
--   What recorded criteria led to a lending recommendation?
--   Can the user download and control a report of the assessment?
+A high Financial Health Score does not guarantee low credit risk or loan approval.
 
-### Important distinction between outputs
-
-The application keeps these concepts separate:
-
-1.  **Financial Health Score:** A designed score summarizing selected
-    aspects of financial stability, such as income consistency, cash
-    flow, savings, and debt burden.
-2.  **Credit Risk Estimate:** A model output estimating the risk of a
-    defined repayment outcome over a defined period. This requires
-    suitable historical repayment labels and model validation.
-3.  **Eligibility Assessment:** A comparison of available information
-    and model outputs with configured criteria.
-4.  **Lending Decision:** A decision made by the authorized lender or
-    decision-maker, where applicable.
-
-A high Financial Health Score does not automatically imply low credit
-risk or guaranteed loan approval.
-
-------------------------------------------------------------------------
+---
 
 ## 2. Problem Statement
 
-Many micro-entrepreneurs and gig workers receive income irregularly, are
-paid in cash or through multiple payment channels, and may not have
-formal payslips or a long credit-bureau history. A conventional
-assessment process may not adequately represent their actual financial
-activity.
+Billions of micro-entrepreneurs and gig workers are excluded from fair institutional credit because they lack formal payslips and bureau histories. Alternative scoring models exist, but they act as opaque black boxes that cannot provide legally required adverse-action explanations.
 
-At the same time, a score produced by a machine-learning model may be
-difficult for an applicant to understand. If the platform cannot explain
-the important factors behind a prediction or investigate potential bias,
-it may be hard to establish trust in the assessment.
+**Goal:** an alternative underwriting engine that ingests non-traditional indicators (utility-bill consistency, UPI/mobile transaction velocity, seasonal inventory turnover), computes a creditworthiness index, and generates transparent, regulator-compliant explanations using SHAP and LIME.
 
-The project addresses these issues by combining alternative financial
-indicators, informal-income estimation, explainability, model fairness
-evaluation, interactive simulations, transparent reason reporting, and a
-portable financial report.
+---
 
-### Proposed solution
+## 3. Objectives
 
-Build a web application that:
+The expected outcome is a portal where an officer uploads logs, the engine scores the borrower, flags default risk, and visually explains what justified approval or denial. This maps to six platform objectives:
 
-1.  Collects financial data with appropriate consent.
-2.  Validates and categorizes transaction records.
-3.  Estimates informal income and its uncertainty.
-4.  Calculates a documented Financial Health Score.
-5.  Estimates credit risk only when an appropriate model and data are
-    available.
-6.  Uses SHAP to explain individual model predictions.
-7.  Audits model performance and potential disparities across relevant
-    groups.
-8.  Allows users to run isolated What-If scenarios.
-9.  Shows the actual reasons behind configured eligibility outcomes or
-    recorded decisions.
-10. Generates a user-controlled Digital Financial Passport PDF.
+| # | Objective | Success test |
+|---|---|---|
+| **O1** | Fast, safe data intake | Upload to score in under one minute |
+| **O2** | Score borrowers with zero credit history | Works on transaction logs alone |
+| **O3** | Clear default-risk signal | Probability of default plus Low/Medium/High band |
+| **O4** | Visual explanation of each decision | SHAP waterfall plus top contributing factors |
+| **O5** | Name behaviours, not model features | "3 missed electricity bills", not `feat_17` |
+| **O6** | Regulator-ready decision record | Reason codes, adverse-action letter, saved audit entry |
 
-------------------------------------------------------------------------
+---
 
-## 3. Vision and Objectives
+## 4. Users
 
-### Objective 1 --- Financial Health Score
+| Role | Needs |
+|---|---|
+| **Loan officer** (primary) | Upload logs, review score and risk, inspect explanation, record decision |
+| **Borrower** (secondary) | Understand why, see what could improve the outcome, download a report |
+| **Risk analyst / reviewer** | Inspect model audits and fairness metrics |
+| **Model developer** | Track model versions, SHAP output, evaluation |
 
-Assess selected indicators of financial stability and present them in a
-consistent, understandable format. The score should be reproducible,
-documented, and accompanied by the indicators and data limitations that
-influenced it.
+Roles have different permissions. Sensitive fairness-audit data is restricted to authorised reviewers.
 
-### Objective 2 --- AI-Powered Explanation
+---
 
-Translate verified financial metrics, model contributions, and recorded
-decision reasons into clear language. Generated text must be grounded in
-actual system outputs and must not invent financial facts.
+## 5. Features
 
-### Objective 3 --- AI Fairness and Bias Checker
+### 5.1 Core features
 
-Evaluate whether model performance or outcomes differ across relevant
-groups. Provide metrics, sample sizes, limitations, audit dates, model
-versions, and remediation tracking. A fairness audit is an investigation
-aid, not a guarantee that a model is fair.
+| Feature | What it does |
+|---|---|
+| **Financial Health Score** | Documented weighted score from normalised indicators such as net cash flow, income variability, savings rate and bill-payment streaks. |
+| **Informal Income Synthesizer** | Separates business receipts from transfers, refunds and reversals, then estimates recurring monthly income with a reliability indicator. |
+| **Credit Risk Model** | Estimates default probability from behavioural features. |
+| **SHAP Explanation Dashboard** | Waterfall and ranked contribution chart for each prediction, with the correct output scale labelled. |
+| **LIME cross-check** | Second explanation method to confirm the explanation is stable. |
+| **Transparent Decision Reasons** | Criteria checklist, reason codes and status derived from actual rule results. |
+| **What-If Simulator** | Change hypothetical inputs and compare against the baseline without altering the saved assessment. |
+| **Fairness and Bias Checker** | Group-level metrics, sample sizes, model version and audit date. |
+| **Digital Financial Passport** | Downloadable PDF of the selected assessment version. |
 
-### Objective 4 --- SHAP Explanation Dashboard
+### 5.2 Differentiators
 
-Use SHAP (SHapley Additive exPlanations) to show which features
-contributed to a model's prediction and the direction of those
-contributions, using the correct model version and output scale.
+| Differentiator | Why it matters |
+|---|---|
+| **Behaviour-level feature library** | Income regularity, balance floor, bill-pay streak, merchant diversity, inflow/outflow ratio, stock turnover speed. |
+| **Seasonality-aware scoring** | Judges a vendor against their own seasonal cycle rather than a flat threshold. |
+| **Adverse-action letter generator** | Converts SHAP factors into a plain-language denial letter in English, Hindi and Marathi. |
+| **Counterfactual guidance** | "Paying utility bills on time for 3 months is estimated to raise the score by N points." |
+| **Grounded chatbot** | Natural-language Q&A where every statement traces back to a model output. See [section 13](#13-grounded-ai-chatbot). |
+| **SHAP and LIME agreement check** | Shows whether both methods identify the same drivers. |
+| **Fairness audit** | Compares error rates and calibration across groups. |
+| **Dual view** | Technical officer view and simple borrower view. |
 
-### Objective 5 --- What-If Financial Simulator
+### 5.3 Feature details
 
-Allow users to change hypothetical financial values and rerun the
-relevant scoring pipeline. Show baseline and scenario outputs side by
-side without modifying the original assessment.
+#### Financial Health Score
 
-### Objective 6 --- Transparent Approval and Rejection Reasons
-
-Display the actual criteria evaluated, recorded reason codes, missing
-information, and relevant next steps. Clearly distinguish a model
-prediction, an eligibility assessment, and a lender's actual decision.
-
-### Objective 7 --- Digital Financial Passport
-
-Generate a user-controlled PDF that combines selected financial
-indicators, score results, income estimates, explanations, relevant
-decision information, model metadata, and limitations.
-
-### Supporting engine --- Informal Income Synthesizer
-
-Estimate recurring income from available transaction evidence.
-Distinguish gross receipts from net earnings, exclude known transfers
-and refunds where possible, and show uncertainty or data-quality
-limitations.
-
-------------------------------------------------------------------------
-
-## 4. Target Users
-
-### Primary users
-
--   Street vendors and small shop owners.
--   Micro-entrepreneurs and self-employed people.
--   Gig workers and delivery partners.
--   Freelancers and independent contractors.
--   People with irregular or multiple income sources.
--   People who want a clearer summary of their financial activity.
-
-### Secondary users
-
--   Authorized financial reviewers.
--   Lending or credit-risk analysts.
--   Model developers and data scientists.
--   Responsible-AI or model-governance reviewers.
--   Project evaluators who need to inspect the prototype.
-
-Different user roles should have different permissions. Applicant-facing
-users should not automatically have access to restricted fairness-audit
-data, sensitive group attributes, or other people's records.
-
-------------------------------------------------------------------------
-
-## 5. Core Features
-
-## 5.1 Financial Health Score
-
-### Purpose
-
-Summarize selected aspects of a person's financial stability in a score,
-such as a score from 0 to 100. The score is a project-defined indicator,
-not an established universal financial-health standard.
-
-### Inputs
-
-Depending on data availability and user consent, the system may use:
-
--   Average monthly income or receipts.
--   Month-to-month income variability.
--   Monthly expenses.
--   Net cash flow.
--   Savings balance or reserve information.
--   Existing debt obligations.
--   Repayment history, if reliable data is available.
--   Data coverage and completeness indicators.
-
-### Processing flow
-
-1.  Retrieve the validated financial source and assessment period.
-2.  Calculate monthly summaries.
-3.  Derive indicators such as net cash flow and savings rate.
-4.  Normalize eligible indicators to documented scales.
-5.  Apply a documented scoring formula.
-6.  Record the formula or score version and its inputs.
-7.  Return the score, component indicators, and relevant limitations.
-8.  Display the result in the dashboard.
-
-Example calculations:
-
-`Net Cash Flow = Income - Expenses`
-
-`Savings Rate = (Income - Expenses) / Income × 100`
-
-The savings-rate calculation must handle zero or negative income.
-Monthly surplus and the actual savings balance are different concepts
-and should not be confused.
-
-A prototype may use a configurable weighted formula:
-
-`Health Score = Sum(weight_i × normalized_indicator_i)`
-
-The weights should sum to 1 when the component indicators use a 0--100
-scale. These weights are design assumptions until they have been
-appropriately reviewed and validated.
-
-### UI components
-
--   Financial Health Score card.
--   Indicator breakdown.
--   Income and expense trend charts.
--   Cash-flow summary.
--   Data quality or completeness notice.
--   Assessment period and timestamp.
--   Explanation links for individual indicators.
-
-### Technologies
-
--   Python and Pandas for calculations and transaction aggregation.
--   FastAPI for the scoring endpoint.
--   PostgreSQL for assessment history and score versions.
--   React and Tailwind CSS for the interface.
--   Recharts for trends and comparisons.
-
-### Expected output
-
-A score, component indicators, assessment period, data-quality notices,
-and an explanation of how the score was derived.
-
-------------------------------------------------------------------------
-
-## 5.2 AI-Powered Explanation
-
-### Purpose
-
-Explain financial metrics and model results in understandable language.
-
-### Inputs
-
--   Calculated financial indicators.
--   Financial Health Score and its component breakdown.
--   Credit-risk prediction, if available.
--   SHAP values and their feature names.
--   Recorded decision reasons.
--   Data-quality and uncertainty notices.
-
-### Processing flow
-
-1.  Collect the relevant structured outputs.
-2.  Select the most important verified factors.
-3.  Generate text using templates or a constrained language model.
-4.  Validate that every statement is supported by the underlying data.
-5.  Return the explanation and the factors supporting it.
-6.  Display the explanation beside the relevant score or chart.
-
-### Example
-
-A grounded explanation might say:
-
-> Your records show positive cash flow and reasonably consistent
-> deposits. Your existing debt obligations are relatively high compared
-> with the income estimate, which may reduce the model's estimated
-> repayment capacity.
-
-This example should only be shown when the actual records support those
-statements.
-
-### UI components
-
--   Plain-language summary card.
--   Positive and negative contributing-factor lists.
--   Links to the financial metrics being described.
--   Data limitations and confidence notes.
--   Expandable technical details.
--   Explanation generation or loading status.
-
-### Technologies
-
--   Python for assembling structured evidence.
--   SHAP for model-grounded contributions.
--   Optional LLM for language generation.
--   FastAPI for the explanation endpoint.
--   React for displaying the result.
-
-For the initial prototype, deterministic templates are a good starting
-point. If an LLM is added, it must not change a score, invent a
-rejection reason, or present uncertain information as verified fact.
-
-------------------------------------------------------------------------
-
-## 5.3 AI Fairness and Bias Checker
-
-### Purpose
-
-Investigate whether the model's errors, predictions, or decision
-outcomes differ across relevant groups.
-
-### Data requirements
-
-A useful audit requires:
-
--   A defined evaluation dataset.
--   Actual outcomes for the target task, where applicable.
--   Model predictions and decision thresholds.
--   Appropriate group attributes for a lawful, restricted audit.
--   Sufficient sample sizes to interpret group metrics.
--   Model version and evaluation date.
-
-Synthetic data can demonstrate the workflow but cannot establish
-real-world fairness.
-
-### Processing flow
-
-1.  Select the model version and evaluation dataset.
-2.  Generate predictions using the model being evaluated.
-3.  Compare predictions with observed outcomes.
-4.  Calculate selected fairness and performance metrics.
-5.  Show group-level values, sample sizes, and uncertainty.
-6.  Identify potential disparities requiring investigation.
-7.  Document corrective actions and reevaluate any updated model.
-8.  Store the audit summary and model version.
-
-### Metrics that may be considered
-
--   Demographic parity difference.
--   Equal opportunity difference.
--   False-positive and false-negative rates.
--   Calibration.
--   Overall model performance by group.
-
-The meaning of a positive prediction must be defined before interpreting
-a metric. Different fairness criteria may conflict, so one metric cannot
-prove that a model is fair.
-
-### UI components
-
--   Audit status and date.
--   Model version.
--   Overall performance summary.
--   Group-comparison charts.
--   Sample sizes and limitations.
--   Potential-disparity warnings.
--   Remediation notes and audit history.
-
-### Technologies
-
--   Fairlearn for selected group-fairness assessments.
--   Scikit-learn for performance metrics.
--   Pandas for dataset preparation.
--   FastAPI for authorized audit results.
--   PostgreSQL for audit metadata and history.
--   React and Recharts for the reviewer dashboard.
-
-### Important boundary
-
-The fairness checker is a model-governance feature. It should not
-automatically tell an individual applicant that their own assessment is
-fair just because aggregate metrics passed a chosen threshold. Sensitive
-audit attributes must be access-controlled and must not be used casually
-to lower a person's score.
-
-------------------------------------------------------------------------
-
-## 5.4 SHAP Explanation Dashboard
-
-### Purpose
-
-Explain how input features contribute to a particular machine-learning
-prediction.
-
-SHAP values explain a model's output under a specified explanation
-setup. They are not causal proof that changing a feature in real life
-will cause the same change in repayment behavior.
-
-### Processing flow
-
-1.  Load the approved model and matching preprocessing pipeline.
-2.  Prepare the applicant's input using the same feature transformation
-    as model training.
-3.  Obtain the prediction.
-4.  Calculate SHAP values for the appropriate model output.
-5.  Identify important positive and negative contributions.
-6.  Return feature names, values, contributions, and output-scale
-    metadata.
-7.  Render a waterfall plot or ranked contribution chart.
-8.  Provide a grounded plain-language explanation.
-
-For a scalar model output, the common additive form is:
-
-`Model Output = Baseline Output + Sum of SHAP Contributions`
-
-The scale may be raw output, log-odds, or probability, depending on the
-explainer and configuration. The interface must label it accurately.
-
-### UI components
-
--   Prediction summary.
--   Baseline output.
--   SHAP waterfall visualization.
--   Ranked feature-contribution list.
--   Feature values for the applicant.
--   Plain-language explanations.
--   Model version and explanation scale.
-
-### Technologies
-
--   SHAP for feature attribution.
--   Scikit-learn or XGBoost for the model.
--   FastAPI for prediction and explanation responses.
--   React for layout and interactions.
--   A supported SHAP visualization or a carefully implemented custom
-    chart.
-
-Never substitute invented chart values for SHAP output. Prediction and
-explanation must use the same model version.
-
-------------------------------------------------------------------------
-
-## 5.5 What-If Financial Simulator
-
-### Purpose
-
-Let a user explore hypothetical changes to their financial inputs and
-compare the resulting assessment with their original baseline.
-
-### Inputs that may be supported
-
--   Monthly income or receipts.
--   Monthly expenses.
--   Savings balance.
--   Existing debt obligations.
--   Other financial indicators supported by the scoring pipeline.
-
-The UI must validate values and preserve distinctions between
-independent inputs and derived metrics.
-
-### Processing flow
-
-1.  Load an existing assessment as the baseline.
-2.  Initialize scenario inputs from the approved baseline features.
-3.  Let the user change supported values.
-4.  Validate the proposed scenario.
-5.  Submit the scenario to the backend.
-6.  Recalculate dependent financial indicators.
-7.  Rerun the same approved scoring pipeline.
-8.  Compare baseline and scenario results.
-9.  Explain the differences.
-10. Discard or save the scenario separately, according to the user's
-    choice.
-
-### UI components
-
--   Editable inputs or sliders.
--   Baseline result cards.
--   Hypothetical result cards.
--   Before-and-after chart.
--   Difference indicators.
--   Scenario explanation.
--   Reset-to-baseline control.
--   Optional save-scenario button.
-
-### Technologies
-
--   React for state and inputs.
--   React Hook Form and Zod for form validation.
--   FastAPI for scenario evaluation.
--   Python for calculations and model inference.
--   SHAP where appropriate to explain a scenario prediction.
--   Recharts for comparisons.
--   PostgreSQL for scenarios explicitly saved by the user.
-
-The simulator must not mutate the saved baseline assessment. Results are
-hypothetical and do not guarantee a lender's decision.
-
-------------------------------------------------------------------------
-
-## 5.6 Transparent Approval and Rejection Reasons
-
-### Purpose
-
-Explain the actual basis of a configured eligibility result or recorded
-lending decision.
-
-The system must distinguish a financial-health score, a credit-risk
-prediction, an eligibility assessment, and a lender's final decision.
-
-### Processing flow
-
-1.  Load the appropriate assessment and model output.
-2.  Load the applicable policy or demonstration criteria.
-3.  Evaluate each criterion.
-4.  Record which criteria passed or failed.
-5.  Generate reason codes from the actual rule results.
-6.  Include data-quality limitations and any need for additional
-    information.
-7.  Display the status and supporting reasons.
-8.  Store the policy version, model version, status, reasons, and
-    timestamp.
-
-### Example statuses
-
--   Eligible under configured criteria.
--   Not eligible under configured criteria.
--   More information required.
--   Manual review required.
--   Assessment unavailable because required data is missing.
-
-### UI components
-
--   Decision status.
--   Criteria checklist.
--   Reason-code list.
--   Missing-data notice.
--   Explanation of the relevant model output.
--   Recommended next steps.
--   Review or appeal information where applicable.
-
-### Technologies
-
--   Python for decision rules.
--   FastAPI for the decision service.
--   PostgreSQL for decision history.
--   SHAP for model prediction explanation where appropriate.
--   React for the decision screen.
-
-The interface must display recorded reasons rather than inventing
-reasons from a chart. Demo rules must be labelled as demo rules unless
-they represent an actual lender's authorized criteria.
-
-------------------------------------------------------------------------
-
-## 5.7 Digital Financial Passport
-
-### Purpose
-
-Create a user-controlled, downloadable report of the selected
-assessment.
-
-The passport is a project-generated financial report, not a government
-identity document or official credit-bureau report.
-
-### Suggested report contents
-
-1.  Report metadata and assessment period.
-2.  Applicant-selected profile details.
-3.  Financial Health Score and component indicators.
-4.  Informal income estimate and uncertainty.
-5.  Cash-flow and expense summary.
-6.  Credit-risk estimate, if available.
-7.  SHAP explanation and relevant charts.
-8.  Relevant model-audit status and limitations.
-9.  Recorded decision status and reasons, if applicable.
-10. Financial improvement suggestions.
-11. Model version, report generation date, and intended-use disclaimer.
-
-### Processing flow
-
-1.  User selects the assessment and clicks Generate Passport.
-2.  Backend verifies authorization.
-3.  Backend retrieves the exact saved assessment version.
-4.  Report service assembles approved report content.
-5.  ReportLab generates the PDF.
-6.  Backend returns an authorized download or secure short-lived link.
-7.  User downloads the report.
-8.  User chooses whether and how to share it.
-
-### UI components
-
--   Report preview.
--   Included-section list.
--   Generate button.
--   Loading and failure states.
--   Download button.
--   Report history.
--   User-controlled sharing options where implemented.
-
-### Technologies
-
--   ReportLab for PDF generation.
--   FastAPI for authorization and report endpoints.
--   PostgreSQL for report metadata.
--   Private storage for persisted report files, if needed.
--   React for preview and download.
-
-The report must use the saved assessment version. It should not silently
-rerun a newer model when generating an older assessment's report.
-
-------------------------------------------------------------------------
-
-## 5.8 Informal Income Synthesizer
-
-### Purpose
-
-Estimate recurring income from available financial evidence when the
-user does not have conventional salary slips.
-
-### Inputs
-
--   Transaction date.
--   Transaction amount.
--   Transaction direction, if known.
--   Category or description, if available.
--   Source and period.
--   Known transfers, refunds, and reversals.
--   Business expenses where available.
--   Record-coverage information.
-
-### Processing flow
-
-1.  Accept consented CSV or user-entered financial records.
-2.  Validate dates, amounts, columns, and formats.
-3.  Detect duplicates and obvious inconsistencies.
-4.  Categorize receipts, expenses, transfers, refunds, and unknown
-    records.
-5.  Aggregate observed transactions by month.
-6.  Estimate recurring receipts using documented statistical methods.
-7.  Distinguish gross receipts from estimated net earnings.
-8.  Calculate variability and data coverage.
-9.  Return the estimate with limitations and an appropriate reliability
-    indicator.
-10. Pass the derived features to the scoring engines.
-
-### Initial implementation
-
-Start with transparent methods:
-
--   Monthly totals.
--   Rolling averages.
--   Median summaries.
--   Month-to-month variability.
--   Data coverage.
--   Explicit transaction-category rules.
--   Missing-period warnings.
-
-Avoid claiming a precise statistical confidence interval unless the
-method supports one. A qualitative reliability indicator may be more
-appropriate for an initial prototype.
-
-Do not manufacture missing financial history. Unknown transactions
-should remain unknown until appropriately resolved or handled by a
-documented method.
-
-------------------------------------------------------------------------
-
-## 6. End-to-End Application Workflow
-
-The complete workflow connects the features into one application.
-
-1.  **Onboarding:** The user registers and receives information about
-    data use.
-2.  **Consent:** The user authorizes the specific data processing
-    required.
-3.  **Data collection:** The user enters financial details or uploads
-    transaction records.
-4.  **Validation:** The backend checks data quality, duplicates, missing
-    periods, and invalid records.
-5.  **Income estimation:** The income service calculates observed
-    receipts and estimates recurring income.
-6.  **Feature engineering:** The backend calculates the financial
-    indicators required by the scoring models.
-7.  **Financial Health Score:** The documented scoring method calculates
-    the score.
-8.  **Credit-risk assessment:** A validated model estimates risk if
-    appropriate labelled data and an approved model are available.
-9.  **Explainability:** SHAP generates model contributions; templates or
-    a constrained LLM produce plain-language explanations.
-10. **Fairness status:** The application retrieves the relevant
-    model-audit status. Model-level audits also run during development
-    and ongoing monitoring.
-11. **What-If simulation:** The user changes hypothetical values and the
-    backend reruns the relevant assessment without modifying the
-    baseline.
-12. **Decision explanation:** Configured criteria or a recorded lender
-    decision are displayed with evidence-based reasons.
-13. **Digital Passport:** The user generates a report from the saved
-    assessment.
-14. **History and access:** The application preserves assessment
-    versions and enforces access controls.
-
-### Failure and unavailable states
-
-The application must also handle:
-
--   Invalid or unsupported files.
--   Incomplete financial records.
--   Uncertain transaction categories.
--   Insufficient data for an income estimate.
--   Missing repayment labels for credit-risk training.
--   Unavailable model outputs.
--   Missing or stale fairness audits.
--   SHAP explanation failures.
--   Scenario validation errors.
--   PDF generation errors.
--   Unauthorized report or assessment access.
-
-A missing output must be shown as unavailable or requiring review, not
-replaced with a fabricated result.
-
-------------------------------------------------------------------------
-
-## 7. User Interface and Page Structure
-
-### Shared application shell
-
-The authenticated application should use a consistent layout:
-
--   **Sidebar:** Dashboard, Financial Data, Explain My Score, Fairness
-    and Trust, What-If Simulator, Decision Explanation, Digital
-    Passport.
--   **Top bar:** Page title, assessment status, profile menu, and
-    optional notifications.
--   **Main content:** The selected feature's page.
--   **Responsive behavior:** Sidebar collapses on small screens and
-    content stacks vertically.
-
-### Page 1 --- Login and registration
-
-Fields, password controls, validation messages, consent information, and
-login/register actions.
-
-### Page 2 --- Financial Data
-
-CSV upload, transaction preview, category correction, validation
-warnings, and confirmation.
-
-### Page 3 --- Dashboard
-
-Financial Health Score, income estimate, cash flow, income trend,
-assessment status, and recent reports.
-
-### Page 4 --- Explain My Score
-
-Plain-language explanation, SHAP chart, contributing factors, model
-version, and limitations.
-
-### Page 5 --- Fairness and Trust
-
-Authorized model audit summary, group metrics, sample sizes, audit date,
-and remediation status.
-
-### Page 6 --- What-If Simulator
-
-Editable financial values, baseline/scenario comparison, charts, and
-scenario explanations.
-
-### Page 7 --- Decision Explanation
-
-Eligibility status, criteria outcomes, recorded reasons, missing
-information, and next steps.
-
-### Page 8 --- Digital Financial Passport
-
-Report preview, included sections, generate button, download status, and
-report history.
-
-### UI states that every page should support
-
--   Initial/loading state.
--   Successful data state.
--   Empty state.
--   Validation-error state.
--   API-error state.
--   Permission-denied state.
--   Unavailable-data state.
--   Mobile/responsive state.
-
-------------------------------------------------------------------------
-
-## 8. Technology Stack
-
-  Technology              Responsibility
-  ----------------------- -------------------------------------------------------
-  React + TypeScript      Frontend pages, components, typed UI logic
-  Tailwind CSS            Layout, styling, responsive design
-  React Router            Client-side navigation
-  Recharts                Financial trends and comparison charts
-  Lucide React            Icons
-  TanStack Query          API fetching, caching, and loading/error state
-  React Hook Form + Zod   Form state and client-side validation
-  Python                  Financial calculations and model workflows
-  FastAPI                 Backend APIs and request validation
-  Pandas                  Transaction cleaning and aggregation
-  Scikit-learn            Baseline models, preprocessing, and evaluation
-  XGBoost                 Optional structured-data model, subject to validation
-  SHAP                    Feature attribution for model predictions
-  Fairlearn               Group-fairness evaluation
-  PostgreSQL              Persistent application and assessment data
-  ReportLab               PDF generation
-  Pytest                  Backend and calculation tests
-  Git/GitHub              Version control and collaboration
-
-Start with a **modular monolith**: one FastAPI backend containing
-separate modules for each responsibility. This is simpler to build and
-test than multiple microservices and can be split later if justified.
-
-------------------------------------------------------------------------
-
-## 9. System Architecture
-
-### Frontend layer
-
-Responsible for:
-
--   Displaying information.
--   Collecting and validating inputs for usability.
--   Navigating between pages.
--   Sending authenticated requests.
--   Rendering API results.
--   Showing loading, error, and unavailable states.
-
-The frontend must not contain database credentials, private model files,
-or authoritative lending rules.
-
-### API and application layer
-
-FastAPI is responsible for:
-
--   Authentication and authorization.
--   Consent checks.
--   File-upload validation.
--   Assessment orchestration.
--   Request and response schemas.
--   Calling the appropriate processing modules.
--   Applying decision policies.
--   Generating authorized report downloads.
-
-### Data-processing layer
-
-Python modules process transactions, derive indicators, estimate income,
-and prepare model features.
-
-### ML and explainability layer
-
-Contains separate modules for:
-
--   Financial health calculations.
--   Credit-risk prediction.
--   SHAP explanations.
--   Fairness evaluation.
--   Model version management.
-
-The fairness audit should primarily evaluate models using an appropriate
-evaluation dataset. It is not simply a per-user score calculation.
-
-### Persistence layer
-
-PostgreSQL stores users, consent records, data-source metadata,
-assessment versions, financial metrics, scores, explanations, decisions,
-scenarios, fairness-audit summaries, and report metadata.
-
-Raw financial files and generated reports should be stored privately if
-retained.
-
-------------------------------------------------------------------------
-
-## 10. Frontend Implementation Plan
-
-### Recommended folders
-
-``` text
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── App.tsx
-│   │   ├── router.tsx
-│   │   └── queryClient.ts
-│   ├── components/
-│   │   ├── layout/
-│   │   │   ├── AppSidebar.tsx
-│   │   │   ├── Topbar.tsx
-│   │   │   └── PageLayout.tsx
-│   │   └── ui/
-│   ├── features/
-│   │   ├── auth/
-│   │   ├── financial-data/
-│   │   ├── dashboard/
-│   │   ├── financial-health/
-│   │   ├── explanations/
-│   │   ├── fairness/
-│   │   ├── simulator/
-│   │   ├── decisions/
-│   │   └── passport/
-│   ├── lib/
-│   │   ├── apiClient.ts
-│   │   └── formatters.ts
-│   ├── types/
-│   │   └── api.ts
-│   └── main.tsx
-├── package.json
-└── .env.example
+```text
+Net Cash Flow = Income - Expenses
+Savings Rate  = (Income - Expenses) / Income x 100
+Health Score  = sum(weight_i x normalized_indicator_i)
 ```
 
-### Shared frontend components
+Weights sum to 1 and are design assumptions until validated. Zero or negative income must be handled explicitly. Each score stores its formula version and inputs.
 
-Create reusable components rather than rebuilding them for every page:
+#### Informal Income Synthesizer
 
--   `AppSidebar`
--   `Topbar`
--   `PageLayout`
--   `MetricCard`
--   `ScoreIndicator`
--   `IncomeTrendChart`
--   `DataQualityNotice`
--   `LoadingState`
--   `EmptyState`
--   `ErrorState`
--   `ExplanationPanel`
--   `DecisionReasonList`
--   `ReportDownloadButton`
+1. Validate dates, amounts, columns and formats.
+2. Remove duplicates and flag inconsistencies.
+3. Categorise receipts, expenses, transfers, refunds and unknowns.
+4. Aggregate by month.
+5. Estimate recurring receipts using monthly totals, rolling averages, medians and variability.
+6. Distinguish gross receipts from estimated net earnings.
+7. Return the estimate with a reliability indicator and data-coverage warnings.
 
-### API client
+Unknown transactions stay unknown. Missing history is never manufactured.
 
-Create one shared API client that handles the backend base URL,
-authentication strategy, response parsing, and common errors. Define
-TypeScript types for API responses rather than using untyped objects
-throughout the application.
+#### SHAP explanations
 
-If cookie-based authentication is used, configure secure cookies and
-CSRF protection appropriately. Do not put secrets in frontend
-environment variables because browser-exposed variables are not private.
-
-### Frontend implementation order
-
-1.  Create the React + TypeScript project.
-2.  Configure Tailwind CSS and shared layout.
-3.  Configure routing and authentication.
-4.  Build financial data upload and preview.
-5.  Connect the dashboard to real API results.
-6.  Implement SHAP and AI explanations.
-7.  Add fairness and decision pages.
-8.  Implement What-If simulation.
-9.  Add Digital Passport generation and download.
-10. Test loading, error, empty, unauthorized, and mobile states.
-
-------------------------------------------------------------------------
-
-## 11. Backend Modules and Responsibilities
-
-A suggested backend organization:
-
-``` text
-backend/
-├── app/
-│   ├── main.py
-│   ├── api/
-│   │   ├── auth.py
-│   │   ├── consents.py
-│   │   ├── financial_sources.py
-│   │   ├── assessments.py
-│   │   ├── explanations.py
-│   │   ├── fairness.py
-│   │   ├── scenarios.py
-│   │   ├── decisions.py
-│   │   └── reports.py
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── security.py
-│   │   └── permissions.py
-│   ├── schemas/
-│   ├── models/
-│   ├── services/
-│   │   ├── transaction_service.py
-│   │   ├── income_service.py
-│   │   ├── financial_health_service.py
-│   │   ├── credit_risk_service.py
-│   │   ├── shap_service.py
-│   │   ├── explanation_service.py
-│   │   ├── fairness_service.py
-│   │   ├── scenario_service.py
-│   │   ├── decision_service.py
-│   │   └── passport_service.py
-│   └── tests/
-├── requirements.txt
-└── .env.example
+```text
+Model Output = Baseline Output + sum(SHAP contributions)
 ```
 
-### Service boundaries
-
--   **Transaction service:** Validates, normalizes, and categorizes
-    source records.
--   **Income service:** Calculates income estimates and reliability
-    indicators.
--   **Financial health service:** Computes the documented score and
-    component metrics.
--   **Credit-risk service:** Loads an approved model and calculates risk
-    estimates.
--   **SHAP service:** Explains the matching model's output.
--   **Explanation service:** Creates evidence-grounded natural-language
-    summaries.
--   **Fairness service:** Runs or retrieves authorized model-level audit
-    results.
--   **Scenario service:** Recalculates a hypothetical assessment without
-    altering the baseline.
--   **Decision service:** Applies versioned criteria and records reason
-    codes.
--   **Passport service:** Creates a PDF from a selected saved assessment
-    version.
-
-Keep calculation logic out of API route handlers where possible. Route
-handlers should validate requests, check permissions, call services, and
-return typed responses.
-
-------------------------------------------------------------------------
-
-## 12. Proposed API Design
-
-These are proposed endpoints for implementation.
-
-  ----------------------------------------------------------------------------------------
-  Method                  Endpoint                                 Purpose
-  ----------------------- ---------------------------------------- -----------------------
-  POST                    `/api/auth/register`                     Register a user
-
-  POST                    `/api/auth/login`                        Authenticate a user
-
-  POST                    `/api/consents`                          Record consent for a
-                                                                   defined purpose
-
-  POST                    `/api/financial-sources/upload`          Upload financial CSV
-
-  POST                    `/api/financial-sources/{id}/validate`   Validate uploaded data
-
-  POST                    `/api/assessments`                       Create an assessment
-
-  GET                     `/api/assessments/{id}`                  Retrieve an authorized
-                                                                   assessment
-
-  GET                     `/api/assessments/{id}/explanation`      Retrieve explanation
-                                                                   results
-
-  POST                    `/api/scenarios`                         Run a hypothetical
-                                                                   scenario
-
-  GET                     `/api/decisions/{id}`                    Retrieve recorded
-                                                                   decision reasons
-
-  GET                     `/api/fairness/audits`                   Retrieve authorized
-                                                                   audit summaries
-
-  POST                    `/api/reports`                           Generate a Digital
-                                                                   Passport
-
-  GET                     `/api/reports/{id}/download`             Download an authorized
-                                                                   report
-  ----------------------------------------------------------------------------------------
-
-Every endpoint must check access permissions. A user must not be able to
-access another person's data by changing an ID in a URL.
-
-Request and response models should explicitly define types, validation
-rules, optional fields, and unavailable states. The backend must derive
-scores from validated sources rather than trusting a client-submitted
-score.
-
-------------------------------------------------------------------------
-
-## 13. Database Design
-
-Suggested logical tables:
-
-  -----------------------------------------------------------------------
-  Table                               Purpose
-  ----------------------------------- -----------------------------------
-  `users`                             Account details and authentication
-                                      metadata
-
-  `consents`                          Purpose, scope, status, and
-                                      timestamp of consent
-
-  `financial_sources`                 Metadata for uploaded or entered
-                                      financial data
-
-  `transactions`                      Normalized financial transactions,
-                                      where retention is needed
-
-  `assessments`                       Assessment ID, owner, date, status,
-                                      and model version
-
-  `financial_metrics`                 Derived financial indicators
-
-  `scores`                            Financial Health Score and
-                                      credit-risk outputs
-
-  `explanations`                      Feature contributions and
-                                      explanation metadata
-
-  `fairness_audits`                   Model-level audit metrics,
-                                      versions, and dates
-
-  `scenarios`                         Separately stored hypothetical
-                                      inputs and outputs
-
-  `decisions`                         Policy version, status, reasons,
-                                      and decision metadata
-
-  `reports`                           Report metadata and private file
-                                      reference
-  -----------------------------------------------------------------------
-
-### Data integrity rules
-
--   Link each output to an assessment ID.
--   Store model and policy versions.
--   Do not overwrite historical assessment results when a model changes.
--   Keep restricted fairness-audit data separate from applicant-facing
-    profiles.
--   Limit retention of raw transactions.
--   Keep report files private and authorize each download.
--   Use database migrations to track schema changes.
--   Record enough metadata to reconstruct how a historical assessment
-    was produced.
-
-------------------------------------------------------------------------
-
-## 14. Machine-Learning Strategy
-
-### Model A --- Financial Health Score
-
-Start with a transparent, documented formula. Choose indicators,
-normalization rules, missing-data behavior, and weights explicitly.
-Validate the score's intended meaning before presenting it as a
-real-world assessment.
-
-### Model B --- Informal Income Estimation
-
-Start with monthly aggregation, robust averages, medians, variability,
-and data coverage. More advanced forecasting can be added only when the
-available time series and validation strategy justify it.
-
-### Model C --- Credit Risk
-
-Start with logistic regression as a baseline. Compare it with a model
-such as XGBoost only when a suitable dataset contains historical
-repayment outcomes and a defined target.
-
-Evaluate with appropriate held-out data, calibration checks, and
-performance metrics. Avoid data leakage between training and test data.
-
-### Model D --- Fairness Evaluation
-
-Evaluate group-level performance, selected fairness metrics, error
-rates, and calibration where suitable. Document limitations and
-investigate disparities before approving a model.
-
-### Data limitation
-
-A dataset containing only income and expenses is not enough to teach a
-model whether borrowers actually repay loans. Synthetic profiles are
-useful for a prototype's UI and workflow, but they do not establish
-real-world model accuracy or fairness.
-
-Do not use arbitrary labels such as "high income means good borrower" as
-a substitute for observed repayment outcomes.
-
-------------------------------------------------------------------------
-
-## 15. Data Requirements and Processing
-
-### Suggested transaction fields
-
--   Transaction date.
--   Amount.
--   Debit or credit direction, if known.
--   Transaction category, if available.
--   Description or merchant label, if appropriate.
--   Source identifier.
--   Currency.
--   Data-quality or categorization status.
-
-### Data-processing stages
-
-1.  Validate file type, structure, size, and required columns.
-2.  Normalize dates, currency, signs, and amounts.
-3.  Detect duplicate records.
-4.  Identify refunds, reversals, and known internal transfers.
-5.  Categorize transactions and flag uncertain categories.
-6.  Aggregate monthly totals.
-7.  Calculate financial indicators.
-8.  Estimate income and report its limitations.
-9.  Create the model feature vector using the approved preprocessing
-    pipeline.
-10. Store derived results with source and assessment references.
-
-Do not assume every incoming transfer is income. Transfers between a
-person's own accounts, refunds, borrowed money, and one-time asset sales
-may need different treatment.
-
-------------------------------------------------------------------------
-
-## 16. Security, Privacy, Fairness, and Responsible Use
-
-Financial data is sensitive. Security and responsible-use controls must
-be designed into the application.
-
-### Authentication and authorization
-
--   Use secure password hashing or a trusted identity provider.
--   Use a properly configured session or token strategy.
--   Check ownership and role permissions on every protected request.
--   Apply CSRF protections if cookie-based authentication is used.
--   Never expose database credentials or private model files to the
-    browser.
-
-### Consent and data handling
-
--   Explain the purpose of each data-processing operation.
--   Collect only the data required for the selected purpose.
--   Restrict access to raw transaction records.
--   Define retention and deletion policies.
--   Provide appropriate consent-withdrawal and data-management
-    mechanisms.
--   Use HTTPS and private storage.
--   Avoid exposing unnecessary details in logs or downloadable reports.
-
-### File security
-
--   Validate uploads on the backend.
--   Apply file-size limits.
--   Reject malformed records safely.
--   Prevent spreadsheet formula injection in exported data.
--   Avoid executing or trusting uploaded content.
-
-### Responsible model behavior
-
--   Clearly label estimated income.
--   Distinguish financial health from credit risk.
--   Do not invent rejection reasons.
--   Do not infer that a person is untrustworthy from missing data alone.
--   Show uncertainty and model limitations.
--   Keep model explanations tied to the correct model version.
--   Restrict sensitive audit attributes.
--   Document the purpose and limitations of the scoring method.
-
-For an India-focused product, review applicable Indian data-protection
-requirements and relevant lending rules before real-world use. This
-README describes a prototype design and does not establish regulatory
-compliance.
-
-------------------------------------------------------------------------
-
-## 17. Suggested Project Structure
-
-A repository can contain separate frontend and backend applications:
-
-``` text
+The scale (raw, log-odds or probability) is labelled in the UI. Prediction and explanation always use the same model version. SHAP describes model behaviour, it is not causal proof.
+
+#### What-If Simulator
+
+Editable inputs (income, expenses, savings, debt, bill-payment behaviour) are validated, sent to the backend, run through the same approved pipeline, and shown beside the baseline. Results are hypothetical and are stored only if the user saves them.
+
+#### Fairness checker
+
+Candidate metrics: demographic parity difference, equal opportunity difference, false-positive and false-negative rates, calibration, per-group performance. A fairness audit is an investigation aid, not a guarantee of fairness. Synthetic data demonstrates the workflow but cannot establish real-world fairness.
+
+#### Digital Financial Passport
+
+A PDF containing report metadata, score and indicators, income estimate, cash-flow summary, risk estimate, SHAP explanation, audit status, decision reasons, improvement suggestions, model version and a limitations disclaimer. It is a project-generated report, not an official credit report.
+
+---
+
+## 6. Workflow
+
+```mermaid
+flowchart LR
+    A[Upload logs] --> B[Validate and categorise]
+    B --> C[Income synthesizer]
+    C --> D[Feature engineering]
+    D --> E[Health score]
+    D --> F[Risk model]
+    F --> G[SHAP and LIME]
+    G --> H[Pattern labeller]
+    E --> I[Portal]
+    H --> I
+    I --> J[Decision and reasons]
+    I --> K[Chatbot]
+    J --> L[Letter, passport, audit log]
+```
+
+1. The officer uploads transaction logs with borrower consent.
+2. The backend validates data quality, duplicates and missing periods.
+3. The income service estimates recurring income.
+4. Feature engineering builds behavioural indicators.
+5. The scoring engines produce the health score and default probability.
+6. SHAP and LIME produce explanations, translated into behaviour labels.
+7. The portal shows score, risk band, explanation and what-if options.
+8. The officer records a decision, the system stores reasons and versions.
+9. A letter or passport can be generated from the saved assessment.
+
+**Unavailable states:** invalid files, incomplete records, uncertain categories, insufficient data, unavailable model output, missing fairness audit, SHAP failure, scenario validation error, PDF failure, unauthorised access. A missing output is shown as unavailable, never fabricated.
+
+---
+
+## 7. Portal Screens
+
+| # | Screen | Officer does | Sees |
+|---|---|---|---|
+| 1 | Login and consent | Sign in | Data-use information |
+| 2 | Upload | Drop CSV/JSON | Preview, validation warnings, category corrections |
+| 3 | Borrower profile | Review | Synthesised income, transaction summary |
+| 4 | Score card | Read | Score, default probability, risk band, recommendation |
+| 5 | Explanation | Inspect | SHAP waterfall, positive and negative behaviour patterns |
+| 6 | What-If | Test | Baseline versus scenario comparison |
+| 7 | Decision | Record | Criteria checklist, reason codes, adverse-action letter |
+| 8 | Chat | Ask | Grounded answers about this borrower |
+| 9 | Fairness and Trust | Review | Group metrics, sample sizes, audit date |
+| 10 | History | Audit | Past decisions, exportable records |
+
+Every page supports loading, empty, validation-error, API-error, permission-denied, unavailable-data and responsive states.
+
+---
+
+## 8. Architecture
+
+Start as a **modular monolith**: one FastAPI backend with separate service modules.
+
+```mermaid
+flowchart TB
+    UI[React + TypeScript frontend] --> API[FastAPI API layer]
+    API --> TX[Transaction service]
+    API --> INC[Income service]
+    API --> FH[Financial health service]
+    API --> CR[Credit risk service]
+    API --> SH[SHAP and LIME service]
+    API --> EX[Explanation service]
+    API --> FA[Fairness service]
+    API --> SC[Scenario service]
+    API --> DE[Decision service]
+    API --> PA[Passport service]
+    EX --> LLM[LLM API with template fallback]
+    API --> DB[(PostgreSQL)]
+```
+
+| Layer | Responsibility |
+|---|---|
+| **Frontend** | Display, input validation for usability, navigation, rendering API results. Holds no secrets or authoritative lending rules. |
+| **API** | Authentication, authorisation, consent checks, upload validation, orchestration, typed schemas. |
+| **Processing** | Transaction cleaning, indicators, income estimation, feature vectors. |
+| **ML and XAI** | Health score, risk model, SHAP/LIME, fairness evaluation, model versioning. |
+| **Persistence** | Users, consents, assessments, scores, explanations, decisions, scenarios, audits, report metadata. |
+
+---
+
+## 9. Tech Stack
+
+| Technology | Responsibility |
+|---|---|
+| React + TypeScript | Frontend pages and typed UI logic |
+| Tailwind CSS | Layout and responsive styling |
+| React Router | Navigation |
+| Recharts | Trend and comparison charts |
+| TanStack Query | API fetching, caching, loading and error state |
+| React Hook Form + Zod | Form state and validation |
+| Python | Calculations and model workflows |
+| FastAPI | Backend APIs and request validation |
+| Pandas | Transaction cleaning and aggregation |
+| scikit-learn | Baseline models, preprocessing, evaluation |
+| LightGBM / XGBoost | Gradient-boosted risk model |
+| SHAP | Feature attribution |
+| LIME | Cross-check explanations |
+| Fairlearn | Group-fairness evaluation |
+| PostgreSQL | Persistent data (SQLite is fine for local development) |
+| ReportLab | PDF generation |
+| Gemini API (free tier) | Primary LLM for natural-language explanations |
+| Groq API (free tier) | LLM failover |
+| Pytest | Backend and calculation tests |
+
+---
+
+## 10. API Design
+
+Proposed endpoints. Every endpoint checks access permissions, and users cannot reach another record by changing an ID.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/auth/register` | Register a user |
+| POST | `/api/auth/login` | Authenticate |
+| POST | `/api/consents` | Record consent for a defined purpose |
+| POST | `/api/financial-sources/upload` | Upload transaction logs |
+| POST | `/api/financial-sources/{id}/validate` | Validate uploaded data |
+| POST | `/api/assessments` | Create an assessment |
+| GET | `/api/assessments/{id}` | Retrieve an assessment |
+| GET | `/api/assessments/{id}/explanation` | SHAP, LIME and plain-language explanation |
+| POST | `/api/assessments/{id}/chat` | Grounded chatbot question |
+| POST | `/api/scenarios` | Run a hypothetical scenario |
+| GET | `/api/decisions/{id}` | Recorded decision reasons |
+| POST | `/api/decisions/{id}/letter` | Generate adverse-action letter |
+| GET | `/api/fairness/audits` | Authorised audit summaries |
+| POST | `/api/reports` | Generate Digital Financial Passport |
+| GET | `/api/reports/{id}/download` | Download authorised report |
+
+Scores are always derived on the backend from validated sources, never trusted from the client.
+
+---
+
+## 11. Data Model
+
+| Table | Purpose |
+|---|---|
+| `users` | Accounts, roles |
+| `consents` | Purpose, scope, status, timestamp |
+| `financial_sources` | Upload metadata |
+| `transactions` | Normalised records (limited retention) |
+| `assessments` | Owner, date, status, model version |
+| `financial_metrics` | Derived indicators |
+| `scores` | Health score and risk outputs |
+| `explanations` | Contributions and explanation metadata |
+| `fairness_audits` | Metrics, versions, dates |
+| `scenarios` | Separately stored hypothetical runs |
+| `decisions` | Policy version, status, reason codes |
+| `reports` | Report metadata and private file reference |
+
+**Integrity rules:** link every output to an assessment ID, store model and policy versions, never overwrite historical results, keep fairness-audit data separate from applicant-facing profiles, and keep enough metadata to reconstruct any past assessment.
+
+---
+
+## 12. Machine-Learning Strategy
+
+| Model | Approach |
+|---|---|
+| **A. Financial Health Score** | Transparent weighted formula with documented normalisation and missing-data rules. |
+| **B. Income estimation** | Monthly aggregation, medians, rolling averages, variability, coverage. |
+| **C. Credit risk** | Logistic regression baseline, compared with LightGBM/XGBoost. Monotonic constraints so explanations stay sensible (more on-time bills never lowers the score). |
+| **D. Fairness evaluation** | Group performance, error rates, calibration, documented limitations. |
+
+### Features (examples)
+
+| Group | Features |
+|---|---|
+| Cash flow | Inflow/outflow ratio, balance floor, net cash flow |
+| Regularity | Income variability, active-days ratio, transaction velocity |
+| Obligations | Utility-bill streak, missed-bill count, EMI or debt load |
+| Business | Merchant diversity, seasonal inventory turnover |
+| Quality | Data coverage, unknown-category share |
+
+### Data note
+
+The prototype trains on a **synthetic generator** with realistic personas (vegetable vendor, rickshaw driver, tailor, delivery partner) and planted default behaviours. Synthetic labels demonstrate the workflow, they do not establish real-world accuracy or fairness. Evaluate with held-out data, calibration checks and leakage prevention.
+
+---
+
+## 13. Grounded AI Chatbot
+
+**Rule:** the language model only *talks*. The scoring model and SHAP *decide*.
+
+```mermaid
+flowchart LR
+    Q[Question] --> F[Build facts JSON]
+    F --> P[Prompt with facts only]
+    P --> L{LLM}
+    L -->|Gemini| V[Validate numbers]
+    L -->|Groq failover| V
+    L -->|API down| T[Template fallback]
+    V --> A[Answer]
+    T --> A
+```
+
+| Step | Detail |
+|---|---|
+| Facts JSON | Score, risk band, top positive and negative SHAP factors, counterfactuals, data-quality notes |
+| Prompt | The model receives only the facts JSON and the question |
+| Validation | Every number in the reply must exist in the facts JSON, otherwise fall back to a template |
+| Fallback chain | Gemini, then Groq, then deterministic templates built from SHAP |
+| Languages | English, Hindi, Marathi |
+| Tone | Technical (officer) or simple (borrower) |
+
+Prompt skeleton:
+
+```text
+System: You explain credit decisions. Use ONLY the facts JSON.
+Never add reasons or numbers that are not in it. No lending advice.
+Reply in {language}. Tone: {officer|borrower}.
+User: {question}
+Facts: {json}
+```
+
+Operational notes:
+
+- API keys live in `.env` and are never committed.
+- Only the facts JSON is sent, never raw transaction logs.
+- Use low temperature and cache explanations per assessment.
+- Free-tier limits change often, so check your provider dashboard.
+- The LLM must never change a score, invent a rejection reason, or present uncertain information as verified.
+
+---
+
+## 14. Security, Privacy and Responsible Use
+
+Financial data is sensitive.
+
+**Authentication and authorisation**
+- Secure password hashing or a trusted identity provider.
+- Ownership and role checks on every protected request.
+- CSRF protection if cookie-based sessions are used.
+- No database credentials or private model files in the browser.
+
+**Consent and data handling**
+- Explain the purpose of each processing operation and collect only what is needed.
+- Restrict access to raw transactions and define retention and deletion.
+- HTTPS and private storage for files and reports.
+
+**File security**
+- Backend validation and size limits.
+- Safe rejection of malformed rows.
+- Protection against spreadsheet formula injection in exports.
+
+**Responsible model behaviour**
+- Label estimated income clearly.
+- Keep financial health separate from credit risk.
+- Never invent rejection reasons.
+- Do not treat missing data alone as untrustworthiness.
+- Show uncertainty and limitations.
+- Restrict sensitive audit attributes and do not use them to lower a score.
+
+> This is a prototype design. It does not establish regulatory compliance. Review applicable Indian data-protection and lending rules before any real-world use.
+
+---
+
+## 15. Project Structure
+
+```text
 explainable-credit-scoring/
 ├── README.md
 ├── .gitignore
 ├── docs/
 │   ├── architecture.md
-│   ├── feature-specification.md
 │   ├── api-specification.md
 │   └── data-dictionary.md
 ├── frontend/
 │   ├── src/
-│   ├── public/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── features/
+│   │   │   ├── auth/
+│   │   │   ├── upload/
+│   │   │   ├── score/
+│   │   │   ├── explanation/
+│   │   │   ├── simulator/
+│   │   │   ├── decisions/
+│   │   │   ├── chat/
+│   │   │   ├── fairness/
+│   │   │   └── passport/
+│   │   ├── lib/
+│   │   └── types/
 │   ├── package.json
 │   └── .env.example
 ├── backend/
 │   ├── app/
+│   │   ├── main.py
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── schemas/
+│   │   ├── models/
+│   │   └── services/
 │   ├── tests/
 │   ├── requirements.txt
 │   └── .env.example
 ├── ml/
-│   ├── notebooks/
+│   ├── data_generator/
 │   ├── training/
 │   ├── evaluation/
 │   └── model-card.md
 ├── data/
-│   ├── sample/
-│   └── README.md
+│   └── sample/
 └── reports/
-    └── .gitkeep
 ```
 
-Do not commit real personal financial records, credentials, production
-model secrets, or private reports to Git.
+Never commit real personal financial records, credentials, API keys or private reports.
 
-------------------------------------------------------------------------
+---
 
-## 18. Development Roadmap
+## 16. Roadmap
 
-### Phase 1 --- Foundation and data processing
+- [ ] **Phase 1: Foundation.** Frontend and backend skeleton, auth, consent, CSV upload, validation.
+- [ ] **Phase 2: Income and health score.** Aggregation, income estimate, health score, dashboard.
+- [ ] **Phase 3: Risk model and XAI.** Synthetic data generator, baseline model, SHAP and LIME.
+- [ ] **Phase 4: Decisions and fairness.** Reason codes, decision records, adverse-action letter, fairness metrics.
+- [ ] **Phase 5: What-If and chatbot.** Isolated scenarios, counterfactuals, grounded chat with fallback.
+- [ ] **Phase 6: Passport.** PDF template and secure download.
+- [ ] **Phase 7: Testing and demo.** End-to-end tests and reproducible demo.
 
-Implement React, FastAPI, PostgreSQL, authentication, consent, CSV
-upload, and transaction validation.
+### Hackathon priority
 
-**Milestone:** A user can upload records and review validated data.
+| Level | Items |
+|---|---|
+| **Must** | Upload, features, risk model, SHAP waterfall, score and risk flag |
+| **Should** | Income synthesizer, behaviour labels, decision record, adverse-action letter |
+| **Nice** | Chatbot, counterfactuals, multilingual output, fairness audit, passport |
 
-### Phase 2 --- Income estimation and Financial Health Score
+---
 
-Implement monthly aggregation, income estimates, cash-flow indicators,
-documented score calculations, and the main dashboard.
+## 17. Testing and Acceptance Criteria
 
-**Milestone:** The dashboard displays reproducible metrics and a
-Financial Health Score.
+| Area | Criteria |
+|---|---|
+| Financial data | Invalid records flagged, missing values never treated as zero, duplicate handling documented, transfers and refunds not counted as earnings |
+| Income estimation | Receipts distinguished from net earnings, incomplete periods flagged, limitations displayed |
+| Health score | Reproducible, documented weights, zero and negative income handled |
+| Explanations | Statements match evidence, unsupported claims never generated, unavailable output clearly stated |
+| SHAP | Matches model version, output scale labelled, preprocessing consistent with training |
+| Fairness | Group sizes and limitations shown, missing audits not shown as passed, tied to model version and dataset |
+| What-If | Baseline never modified, invalid inputs rejected, same pipeline as baseline |
+| Decisions | Reasons match actual rule outcomes, assessment status distinct from final approval, versions recorded |
+| Chatbot | Every number traceable to facts JSON, fallback works when API is down |
+| Passport | Uses selected saved version, unauthorised download blocked |
+| Security | No cross-user access via ID change, no secrets in repo |
 
-### Phase 3 --- Credit-risk model and SHAP
+---
 
-Prepare suitable data, train a baseline model if repayment labels are
-available, evaluate it, and integrate SHAP.
+## 18. Local Setup
 
-**Milestone:** The application can show a model-grounded risk estimate
-and explanation.
+> Proposed setup for the planned architecture. It is not a claim that a working implementation already exists.
 
-### Phase 4 --- Fairness and transparent decisions
+**Prerequisites:** Node.js, Python 3.10+, PostgreSQL (or SQLite for local work), Git.
 
-Implement fairness metrics, audit history, versioned demonstration
-criteria, reason codes, and decision records.
+**Frontend**
 
-**Milestone:** Users can understand the assessment and authorized
-reviewers can inspect model-audit results.
-
-### Phase 5 --- What-If Simulator
-
-Implement controlled inputs, isolated scenarios, model reruns,
-comparisons, and explanations.
-
-**Milestone:** Hypothetical changes produce separate results without
-changing the saved baseline.
-
-### Phase 6 --- Digital Financial Passport
-
-Create the PDF template, integrate saved assessment results, and
-implement secure report generation.
-
-**Milestone:** A user can generate and download the report in one click.
-
-### Phase 7 --- Testing and demonstration
-
-Test calculations, permissions, data validation, model outputs, fairness
-metrics, scenario isolation, and report consistency.
-
-**Milestone:** A reproducible end-to-end prototype.
-
-------------------------------------------------------------------------
-
-## 19. Testing and Acceptance Criteria
-
-### Financial data
-
--   Invalid records are rejected or flagged.
--   Missing values are not silently treated as zero.
--   Duplicate handling is documented.
--   Transfers and refunds are not automatically classified as earnings.
-
-### Income estimation
-
--   Observed receipts are distinguished from estimated net earnings.
--   Incomplete periods are identified.
--   Uncertainty or data-quality limitations are displayed.
-
-### Financial Health Score
-
--   Results are reproducible.
--   Calculation weights and normalization are documented.
--   Edge cases, including zero or negative income, are handled.
-
-### AI explanations
-
--   Statements match the supplied evidence.
--   Unsupported financial claims are not generated.
--   Unavailable outputs are communicated clearly.
-
-### SHAP
-
--   Explanations match the relevant model version.
--   The output scale is correctly labelled.
--   Feature names and preprocessing are consistent with model training.
-
-### Fairness
-
--   Metrics include group sizes and relevant limitations.
--   Missing audits are not displayed as passed audits.
--   Results are tied to a specific model version and evaluation dataset.
-
-### What-If simulation
-
--   Scenarios do not modify the original assessment.
--   Invalid inputs are rejected.
--   Results use the same approved scoring pipeline as the baseline.
-
-### Decisions
-
--   Displayed reasons match actual rule outcomes or recorded lender
-    decisions.
--   The system distinguishes assessment status from final loan approval.
--   Policy and model versions are recorded.
-
-### Digital Passport
-
--   The report uses the selected saved assessment version.
--   Unauthorized users cannot download the report.
--   The PDF contains the correct metadata and limitations.
-
-### Security
-
--   Users cannot access another user's records by changing identifiers.
--   Credentials and secrets are not committed to the repository.
--   Uploads and report downloads enforce access controls.
-
-------------------------------------------------------------------------
-
-## 20. Local Development Setup
-
-The following is a proposed setup for the planned architecture. It is
-not a claim that a working implementation already exists.
-
-### Prerequisites
-
--   Node.js and npm.
--   Python.
--   PostgreSQL.
--   Git.
--   A code editor such as VS Code.
-
-### Frontend setup
-
-Create a React + TypeScript application using a suitable Vite template,
-then install the UI and data-fetching dependencies.
-
-Example:
-
-``` bash
+```bash
 npm create vite@latest frontend -- --template react-ts
 cd frontend
 npm install
@@ -1502,200 +534,117 @@ npm install react-router-dom @tanstack/react-query recharts lucide-react
 npm install react-hook-form zod @hookform/resolvers
 ```
 
-Install and configure Tailwind CSS using the instructions for the
-Tailwind version selected for the project. Optional UI component
-libraries can be added after the base layout is working.
+Then install and configure Tailwind CSS following the docs for your chosen version.
 
-### Backend setup
+**Backend**
 
-Create a virtual environment and install the initial dependencies:
-
-``` bash
+```bash
 cd backend
 python -m venv .venv
+# Linux/macOS: source .venv/bin/activate
+# Windows:     .venv\Scripts\activate
+pip install fastapi uvicorn pandas sqlalchemy scikit-learn lightgbm shap lime fairlearn reportlab pytest python-dotenv
 ```
 
-Activate the environment for your operating system, then install the
-required packages, including FastAPI, Uvicorn, Pandas, SQLAlchemy, a
-PostgreSQL driver, Scikit-learn, SHAP, Fairlearn, ReportLab, and Pytest.
+Pin tested versions in `requirements.txt` before sharing.
 
-A project-specific `requirements.txt` should pin tested compatible
-versions before deployment.
+**Environment**
 
-### Environment configuration
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
 
-Create local environment files from `.env.example`. Configure the
-frontend API base URL and backend database connection without committing
-secrets.
+```text
+# backend/.env
+DATABASE_URL=...
+GEMINI_API_KEY=...
+GROQ_API_KEY=...
+```
 
-### Development order
+Keys stay local and are listed in `.gitignore`.
 
-1.  Confirm that the frontend starts.
-2.  Confirm that the FastAPI server starts.
-3.  Configure the database and migrations.
-4.  Connect a basic health endpoint.
-5.  Implement authentication and source upload.
-6.  Add the scoring and explanation modules.
-7.  Test each feature independently.
-8.  Run the full workflow using synthetic demonstration data.
+**Suggested order:** confirm both servers start, add a health endpoint, set up the database, implement upload, add scoring, add explanations, then test each feature with synthetic data.
 
-Production deployment additionally requires proper HTTPS, secret
-management, database migrations, logging, backups, and operational
-monitoring.
+---
 
-------------------------------------------------------------------------
+## 19. Demo Scenario
 
-## 21. Demo Scenario
+A synthetic street vendor has four months of recorded receipts:
 
-Use a synthetic example to demonstrate the end-to-end experience.
+| Month | Receipts |
+|---|---|
+| 1 | ₹35,000 |
+| 2 | ₹42,000 |
+| 3 | ₹31,000 |
+| 4 | ₹40,000 |
 
-### Example applicant
+The mean is ₹37,000 per month. This is **not** automatically net income, since expenses, transfers, refunds and missing records still need to be considered.
 
-A hypothetical street vendor has four months of recorded business
-receipts:
+**Three-minute flow**
 
--   Month 1: ₹35,000.
--   Month 2: ₹42,000.
--   Month 3: ₹31,000.
--   Month 4: ₹40,000.
+1. Introduce a vendor with no credit history.
+2. Upload the synthetic UPI and bill-payment logs.
+3. Show validation results and the synthesised income.
+4. Show the score, default probability and risk band.
+5. Open the SHAP waterfall and read the behaviour patterns.
+6. Run a What-If: pay bills on time for 3 months.
+7. For a denied case, generate the adverse-action letter in Marathi.
+8. Ask the chatbot a follow-up and show the facts JSON beside the answer.
+9. Close with the fairness and calibration summary.
 
-The mean of these observed receipts is ₹37,000 per month. This is not
-automatically the vendor's net income because business expenses,
-transfers, refunds, and missing transactions must still be considered.
+All data, scores and policies in the demo are synthetic and illustrative.
 
-### Demo flow
+---
 
-1.  The applicant registers and reviews the data-use information.
-2.  The applicant uploads the synthetic transaction CSV.
-3.  The platform displays validation results.
-4.  The income service calculates the observed receipt summary and its
-    limitations.
-5.  The Financial Health Score service calculates its documented score.
-6.  If a suitable demo credit-risk model is available, the application
-    displays its output and SHAP explanation.
-7.  The fairness page displays the audit status of the model and the
-    limits of the synthetic dataset.
-8.  The applicant changes hypothetical expenses in the simulator.
-9.  The system recalculates and compares the scenario without changing
-    the baseline.
-10. The decision screen displays the configured demo criteria and their
-    actual outcomes.
-11. The applicant generates the Digital Financial Passport.
+## 20. Limitations and Future Work
 
-Clearly label synthetic data, illustrative scores, and demonstration
-policies. Do not present the demonstration as proof of real-world credit
-accuracy, fairness, or lending eligibility.
+**Limitations**
+- Synthetic data cannot validate real-world credit-risk performance.
+- The health score is only as meaningful as its documented indicators.
+- Income estimates depend on record quality and coverage.
+- SHAP explains model behaviour, not causality.
+- Fairness metrics depend on data, metric choice and context.
+- What-If results are hypothetical.
+- The passport is not an official credit report.
+- Eligibility results are not final lending decisions.
 
-------------------------------------------------------------------------
+**Future work**
+- Additional transaction formats and human-reviewed categorisation.
+- Better income estimation with longer histories.
+- Drift monitoring and versioned model approval.
+- Stronger fairness monitoring.
+- More languages and accessibility improvements.
+- Expiring, revocable report sharing.
+- Secure integration with authorised financial-data providers.
+- Self-hosted language model option for privacy-sensitive deployments.
 
-## 22. Limitations and Future Enhancements
+---
 
-### Initial prototype limitations
+## 21. Glossary
 
--   Synthetic data cannot validate real-world credit-risk performance.
--   A Financial Health Score is only as meaningful as its documented
-    indicators and validation.
--   Informal income estimates depend on the quality and coverage of
-    financial records.
--   SHAP explains model behavior but does not establish causality.
--   Fairness metrics depend on suitable data, metric choices, and
-    context.
--   What-If simulations are hypothetical, not guarantees of real-world
-    outcomes.
--   A generated financial passport is not an official credit report.
--   A configured eligibility result is not necessarily a lender's final
-    decision.
+| Term | Meaning |
+|---|---|
+| Alternative credit scoring | Risk assessment using data beyond conventional credit history |
+| Financial Health Score | Project-defined score summarising stability indicators |
+| Credit risk | Risk of failing to meet repayment obligations |
+| Adverse-action explanation | Reasons given to an applicant when credit is denied |
+| SHAP | Method attributing a prediction to input features |
+| LIME | Local surrogate-model explanation method |
+| Counterfactual | A hypothetical change that would alter the outcome |
+| Fairness audit | Evaluation of performance or outcomes across groups |
+| Reason code | Structured identifier for a documented decision reason |
+| Model version | Identifiable release of a trained model and configuration |
+| Digital Financial Passport | User-controlled report generated by this application |
 
-### Potential future enhancements
+---
 
--   Additional supported transaction formats.
--   Improved transaction categorization with human review.
--   Better income-estimation methods when sufficient longitudinal data
-    exists.
--   Model monitoring and drift detection.
--   Versioned model approval and rollback.
--   More robust fairness monitoring.
--   Localization and accessible multilingual explanations.
--   User-controlled report sharing with expiry and revocation.
--   Secure integrations with authorized financial-data providers where
-    appropriate.
--   More detailed assessment history and comparison.
--   Stronger operational monitoring and deployment automation.
+## 22. Team and License
 
-Each enhancement should be evaluated against data availability, privacy,
-user value, and the ability to test the result reliably.
+**Team:** _add team name and members_
 
-------------------------------------------------------------------------
+**License:** _choose a license (for example MIT) and add a `LICENSE` file_
 
-## 23. Glossary
+---
 
-  -----------------------------------------------------------------------
-  Term                                Meaning
-  ----------------------------------- -----------------------------------
-  Alternative credit scoring          Credit-risk assessment using
-                                      relevant information beyond
-                                      conventional credit-history data
-
-  Financial Health Score              A project-defined score summarizing
-                                      selected financial-stability
-                                      indicators
-
-  Credit risk                         The risk associated with a borrower
-                                      failing to meet repayment
-                                      obligations
-
-  Informal income estimate            An estimate derived from available
-                                      financial evidence, not necessarily
-                                      verified net income
-
-  Feature engineering                 Transforming raw records into
-                                      inputs suitable for a model
-
-  SHAP                                A method for attributing a model's
-                                      prediction to input features
-
-  Fairness audit                      An evaluation of model performance
-                                      or outcomes across relevant groups
-
-  What-If simulation                  A hypothetical recalculation using
-                                      modified inputs
-
-  Reason code                         A structured identifier for a
-                                      documented decision reason
-
-  Model version                       An identifiable release of a
-                                      trained model and its associated
-                                      configuration
-
-  Digital Financial Passport          A user-controlled report generated
-                                      by this application
-
-  Data provenance                     Information about where data came
-                                      from and how it was processed
-  -----------------------------------------------------------------------
-
-------------------------------------------------------------------------
-
-## Final Project Summary
-
-The Explainable Alternative Credit Scoring & Informal Income Synthesizer
-is planned as an integrated financial assessment platform with seven
-user-facing objectives and a supporting income-estimation engine.
-
-Its core value is the combination of **financial assessment,
-explainability, fairness evaluation, interactive simulation, transparent
-decision reasons, and a user-controlled report**.
-
-The recommended implementation order is:
-
-**Financial data collection → Income estimation → Financial Health Score
-→ Credit-risk assessment → SHAP and AI explanations → Fairness audits →
-What-If simulation → Transparent decision reporting → Digital Financial
-Passport.**
-
-Build the application as a modular monolith first, keep outputs
-traceable to the data and model versions that produced them, and use
-synthetic data for demonstrations until appropriate real-world
-validation data and governance are available.
-#   I n f o r m a l - I n c o m e - S y n t h e s i z e r  
- 
+*Built as a hackathon prototype. Synthetic data only. Not financial, legal or credit advice.*
