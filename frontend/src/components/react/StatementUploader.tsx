@@ -192,6 +192,7 @@ export default function StatementUploader() {
         setLoadingStep("Running Calibrated XGBoost & computing SHAP attributions...");
         const data = await res.json();
         localStorage.setItem("equiscore_current_assessment", JSON.stringify(data));
+        window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: data }));
 
         setLoadingStep("Redirecting to live assessment dashboard...");
         window.location.href = `/dashboard?id=${data.assessment_id}`;
@@ -212,6 +213,7 @@ export default function StatementUploader() {
         if (res.ok) {
           const data = await res.json();
           localStorage.setItem("equiscore_current_assessment", JSON.stringify(data));
+          window.dispatchEvent(new CustomEvent('equiscore_assessment_updated', { detail: data }));
           window.location.href = `/dashboard?id=${data.assessment_id}`;
         } else {
           window.location.href = `/dashboard?persona=ramesh`;
