@@ -117,17 +117,17 @@ const {
         </div>
 
         <!-- User Profile Pill -->
-        <div class="flex items-center justify-between px-2 pt-1">
+        <div class="flex items-center justify-between px-2 pt-1" id="sidebar-user-pill">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-full bg-white text-black font-bold flex items-center justify-center text-xs">
+            <div id="sidebar-user-avatar" class="w-8 h-8 rounded-full bg-white text-black font-bold flex items-center justify-center text-xs">
               {applicantName.charAt(0)}
             </div>
             <div class="truncate max-w-[110px]">
-              <p class="text-xs font-semibold text-white truncate">{applicantName}</p>
-              <p class="text-[10px] text-neutral-500 truncate">{businessName}</p>
+              <p id="sidebar-user-name" class="text-xs font-semibold text-white truncate">{applicantName}</p>
+              <p id="sidebar-user-biz" class="text-[10px] text-neutral-500 truncate">{businessName}</p>
             </div>
           </div>
-          <a href="/" class="text-neutral-500 hover:text-white text-xs">➔</a>
+          <a href="/upload" class="text-neutral-500 hover:text-white text-xs" title="Upload another statement">⬆</a>
         </div>
       </div>
     </aside>
@@ -148,19 +148,34 @@ const {
         <div class="flex items-center gap-3">
           <!-- Persona Selector Dropdown -->
           <div class="flex items-center gap-1.5 bg-[#121212] border border-[#262626] rounded-full px-3 py-1 text-xs">
-            <span class="text-neutral-500 hidden sm:inline font-mono">Persona:</span>
-            <a href="?persona=ramesh" class="text-xs font-medium text-neutral-300 hover:text-white transition-colors">Ramesh</a>
+            <span class="text-neutral-500 hidden sm:inline font-mono">Presets:</span>
+            <a href="/dashboard?persona=ramesh" class="text-xs font-medium text-neutral-300 hover:text-white transition-colors">Ramesh</a>
             <span class="text-neutral-600">|</span>
-            <a href="?persona=priya" class="text-xs font-medium text-neutral-300 hover:text-white transition-colors">Priya</a>
+            <a href="/dashboard?persona=priya" class="text-xs font-medium text-neutral-300 hover:text-white transition-colors">Priya</a>
             <span class="text-neutral-600">|</span>
-            <a href="?persona=arun" class="text-xs font-medium text-neutral-300 hover:text-white transition-colors">Arun</a>
+            <a href="/dashboard?persona=arun" class="text-xs font-medium text-neutral-300 hover:text-white transition-colors">Arun</a>
           </div>
 
-          <a href="http://localhost:8000/api/reports/demo/download" target="_blank" class="btn-white text-xs py-1.5 px-3.5 shadow-sm">
-            <span>↓</span> Download Passport
+          <a href="/passport" class="btn-white text-xs py-1.5 px-3.5 shadow-sm">
+            <span>▤</span> View Passport Dossier
           </a>
         </div>
       </header>
+
+      <script is:inline>
+        try {
+          const cached = localStorage.getItem('equiscore_current_assessment');
+          if (cached) {
+            const data = JSON.parse(cached);
+            const nameEl = document.getElementById('sidebar-user-name');
+            const bizEl = document.getElementById('sidebar-user-biz');
+            const avEl = document.getElementById('sidebar-user-avatar');
+            if (nameEl && data.applicant_name) nameEl.textContent = data.applicant_name;
+            if (bizEl && data.business_name) bizEl.textContent = data.business_name;
+            if (avEl && data.applicant_name) avEl.textContent = data.applicant_name.charAt(0);
+          }
+        } catch (e) {}
+      </script>
 
       <!-- Page Content -->
       <main class="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-8">

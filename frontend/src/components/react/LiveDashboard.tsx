@@ -1,0 +1,517 @@
+import React, { useEffect, useState } from 'react';
+import { PRESETS, MOCK_SHAP_RAMESH, MOCK_MONTHLY_TREND } from '../../lib/mockData';
+
+interface MonthlySummary {
+  month_period: string;
+  gross_receipts: number;
+  operating_expenses: number;
+  debt_emi_payments: number;
+  net_operating_surplus: number;
+  customer_tx_count: number;
+}
+
+interface ShapAttribution {
+  feature_name: string;
+  feature_label: string;
+  feature_value: number;
+  shap_value: number;
+  value_formatted: string;
+}
+
+interface RuleResult {
+  rule_id: string;
+  rule_name: string;
+  passed: boolean;
+  actual_value: any;
+  threshold_condition: string;
+  description: string;
+}
+
+interface AssessmentData {
+  assessment_id: string;
+  applicant_name: string;
+  business_name: string;
+  business_type: string;
+  income_synthesis: {
+    average_monthly_gross_receipts: number;
+    average_monthly_expenses: number;
+    average_monthly_debt_emi: number;
+    average_monthly_net_surplus: number;
+    net_surplus_ratio: number;
+    income_volatility_cv: number;
+    min_observed_balance: number;
+    total_tx_count: number;
+    data_coverage_months: number;
+    coverage_reliability_percent: number;
+    monthly_trend: MonthlySummary[];
+    anomaly_flags: string[];
+  };
+  financial_health_score: {
+    overall_score: number;
+    health_band: string;
+    pillar_scores: Record<string, number>;
+    strengths: string[];
+    risk_factors: string[];
+  };
+  credit_risk_ml: {
+    repayment_probability_percent: number;
+    default_probability_percent: number;
+    risk_tier: string;
+    model_version: string;
+    baseline_expected_probability: number;
+    attributions: ShapAttribution[];
+  };
+  underwriting_decision: {
+    decision_status: string;
+    rules_passed_count: number;
+    total_rules_count: number;
+    rule_results: RuleResult[];
+    reason_codes: string[];
+    actionable_recommendations: string[];
+  };
+}
+
+export default function LiveDashboard() {
+  const [assessment, setAssessment] = useState<AssessmentData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      const params = new URLSearchParams(window.location.search);
+      const queryId = params.get('id');
+      const queryPersona = params.get('persona');
+
+      // 1. Check if localStorage has active assessment and matches query ID
+      const cached = localStorage.getItem('equiscore_current_assessment');
+      if (cached) {
+        try {
+          const parsed: AssessmentData = JSON.parse(cached);
+          if (!queryId || parsed.assessment_id === queryId) {
+            setAssessment(parsed);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to parse cached assessment', e);
+        }
+      }
+
+      // 2. Fetch assessment from backend API
+      const targetEndpoint = queryId 
+        ? `http://localhost:8000/api/assessments/${queryId}`
+        : queryPersona
+        ? `http://localhost:8000/api/assessments/${queryPersona}`
+        : `http://localhost:8000/api/assessments/latest`;
+
+      try {
+        const res = await fetch(targetEndpoint);
+        if (res.ok) {
+          const data: AssessmentData = await res.json();
+          setAssessment(data);
+          localStorage.setItem('equiscore_current_assessment', JSON.stringify(data));
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Backend fetch failed, falling back to preset', err);
+      }
+
+      // 3. Fallback to rich default preset (Ramesh)
+      const p = PRESETS[queryPersona?.toLowerCase() || 'ramesh'] || PRESETS.ramesh;
+      const fallbackData: AssessmentData = {
+        assessment_id: `ASM_${p.name.replace(/\s+/g, '').toUpperCase()}_01`,
+        applicant_name: p.name,
+        business_name: p.business,
+        business_type: p.type,
+        income_synthesis: {
+          average_monthly_gross_receipts: p.gross,
+          average_monthly_expenses: p.expenses,
+          average_monthly_debt_emi: p.emi,
+          average_monthly_net_surplus: p.surplus,
+          net_surplus_ratio: p.surplus / p.gross,
+          income_volatility_cv: p.cv,
+          min_observed_balance: 11500,
+          total_tx_count: 1357,
+          data_coverage_months: 4,
+          coverage_reliability_percent: 85,
+          monthly_trend: MOCK_MONTHLY_TREND.map((m) => ({
+            month_period: m.month,
+            gross_receipts: m.gross,
+            operating_expenses: m.expenses,
+            debt_emi_payments: 3200,
+            net_operating_surplus: m.surplus,
+            customer_tx_count: 315
+          })),
+          anomaly_flags: []
+        },
+        financial_health_score: {
+          overall_score: p.fhs,
+          health_band: 'Prime Stable Band',
+          pillar_scores: {
+            cashflow_surplus: 26.5,
+            income_consistency: 22.0,
+            debt_to_surplus: 17.5,
+            liquidity_reserve: 12.0,
+            documentation_coverage: 7.0
+          },
+          strengths: ['Robust net operating margin', 'Consistent daily customer receipts', 'Well-managed debt burden'],
+          risk_factors: []
+        },
+        credit_risk_ml: {
+          repayment_probability_percent: p.prob,
+          default_probability_percent: Number((100 - p.prob).toFixed(1)),
+          risk_tier: p.tier,
+          model_version: 'Calibrated XGBoost-AltCredit-v1.0',
+          baseline_expected_probability: 61.5,
+          attributions: MOCK_SHAP_RAMESH.map((a) => ({
+            feature_name: a.feature_label.toLowerCase().replace(/\s+/g, '_'),
+            feature_label: a.feature_label,
+            feature_value: 0,
+            shap_value: a.shap_value,
+            value_formatted: a.value_formatted
+          }))
+        },
+        underwriting_decision: {
+          decision_status: p.decision,
+          rules_passed_count: 5,
+          total_rules_count: 5,
+          rule_results: [
+            { rule_id: 'R1', rule_name: 'Minimum Monthly Surplus', passed: true, actual_value: `₹${p.surplus.toLocaleString()}`, threshold_condition: '>= ₹6,000/mo', description: 'Borrower net cashflow demonstrates viable debt-service capability.' },
+            { rule_id: 'R2', rule_name: 'Composite FHS Score Threshold', passed: true, actual_value: `${p.fhs}/100`, threshold_condition: '>= 65/100', description: 'Deterministic 5-pillar health score exceeds underwriting barrier.' },
+            { rule_id: 'R3', rule_name: 'Debt Burden Ratio', passed: true, actual_value: `${((p.emi / p.surplus) * 100).toFixed(1)}%`, threshold_condition: '<= 50% of surplus', description: 'Current debt commitments remain well within repayment margin.' },
+            { rule_id: 'R4', rule_name: 'Statement Duration', passed: true, actual_value: '4 mos', threshold_condition: '>= 3 months', description: 'Data window verifies sustained informal commercial activity.' },
+            { rule_id: 'R5', rule_name: 'Alternative ML Confidence', passed: true, actual_value: `${p.prob}%`, threshold_condition: '>= 60.0% probability', description: 'Calibrated XGBoost prediction warrants favorable risk tier.' }
+          ],
+          reason_codes: ['EXP_SURPLUS_HEALTHY', 'STABLE_CASHFLOW_CV', 'ADEQUATE_DOCUMENTATION_DEPTH'],
+          actionable_recommendations: ['Maintain current daily UPI banking discipline', 'Eligible for pre-approved working capital loan up to ₹250,000']
+        }
+      };
+
+      setAssessment(fallbackData);
+      setLoading(false);
+    }
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="py-24 flex flex-col items-center justify-center space-y-4">
+        <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+        <p className="text-sm font-mono text-neutral-400">Loading verified financial assessment...</p>
+      </div>
+    );
+  }
+
+  if (!assessment) {
+    return (
+      <div className="py-16 text-center text-neutral-400 font-mono text-sm">
+        Assessment data could not be loaded. Please <a href="/upload" className="text-white underline">upload a statement</a>.
+      </div>
+    );
+  }
+
+  const { income_synthesis, financial_health_score, credit_risk_ml, underwriting_decision } = assessment;
+  const isEligible = underwriting_decision.decision_status.includes('ELIGIBLE') || underwriting_decision.decision_status.includes('PRE-APPROVED');
+  const operatingMargin = ((income_synthesis.average_monthly_net_surplus / Math.max(1, income_synthesis.average_monthly_gross_receipts)) * 100).toFixed(1);
+
+  return (
+    <div className="space-y-8">
+      {/* Welcome & Profile Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase font-mono tracking-wider text-neutral-400">Verified Dossier</span>
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[#1A1A1A] text-neutral-300 border border-[#2E2E2E]">
+              ID: {assessment.assessment_id}
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold text-white mt-1">
+            {assessment.applicant_name} — {assessment.business_name}
+          </h2>
+          <p className="text-xs text-text-secondary mt-1 font-light">
+            Archetype: <span className="text-white font-medium capitalize">{assessment.business_type.replace('_', ' ')}</span> • {income_synthesis.data_coverage_months} Months Verified • {income_synthesis.total_tx_count.toLocaleString()} Normalized Transactions
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold font-mono border ${
+            isEligible 
+              ? 'bg-white text-black border-white' 
+              : 'bg-[#181818] text-white border-[#333333]'
+          }`}>
+            Status: <strong>{underwriting_decision.decision_status}</strong>
+          </span>
+          <a href="/upload" className="btn-dark text-xs py-1.5 px-3">
+            Upload Another Data
+          </a>
+          <a 
+            href={`http://localhost:8000/api/reports/${assessment.assessment_id}/download`} 
+            target="_blank" 
+            rel="noreferrer"
+            className="btn-white text-xs py-1.5 px-3 flex items-center gap-1.5"
+          >
+            <span>↓</span> Download PDF Passport
+          </a>
+        </div>
+      </div>
+
+      {/* Monochrome Top Metric Cards Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Card 1: FHS Score */}
+        <div className="card-mono flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
+            <span>Health Score</span>
+            <span className="cursor-pointer text-neutral-500 hover:text-white" title="Deterministic 5-pillar composite index (0-100)">ⓘ</span>
+          </div>
+          <div>
+            <p className="num-mono text-3xl font-extrabold text-white">
+              {financial_health_score.overall_score}
+              <span className="text-neutral-500 text-sm font-normal">/100</span>
+            </p>
+            <p className="text-[11px] text-neutral-300 font-semibold mt-1">
+              {financial_health_score.health_band}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Monthly Gross Receipts */}
+        <div className="card-mono flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
+            <span>Monthly Gross</span>
+            <span className="cursor-pointer text-neutral-500 hover:text-white" title="Synthesized customer gross revenue">ⓘ</span>
+          </div>
+          <div>
+            <p className="num-mono text-3xl font-extrabold text-white">
+              ₹{Math.round(income_synthesis.average_monthly_gross_receipts).toLocaleString()}
+            </p>
+            <p className="text-[11px] text-neutral-400 mt-1 font-mono">
+              {Math.round(income_synthesis.total_tx_count / Math.max(1, income_synthesis.data_coverage_months))} txns/mo avg
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Net Cash Surplus */}
+        <div className="card-mono flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
+            <span>Net Surplus</span>
+            <span className="cursor-pointer text-neutral-500 hover:text-white" title="Gross receipts minus operating outflows">ⓘ</span>
+          </div>
+          <div>
+            <p className="num-mono text-3xl font-extrabold text-white">
+              ₹{Math.round(income_synthesis.average_monthly_net_surplus).toLocaleString()}
+            </p>
+            <p className="text-[11px] text-neutral-400 mt-1 font-mono">
+              {operatingMargin}% operating margin
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Repayment Confidence */}
+        <div className="card-mono flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
+            <span>ML Confidence</span>
+            <span className="cursor-pointer text-neutral-500 hover:text-white" title="Calibrated XGBoost repayment probability">ⓘ</span>
+          </div>
+          <div>
+            <p className="num-mono text-3xl font-extrabold text-white">
+              {credit_risk_ml.repayment_probability_percent}%
+            </p>
+            <p className="text-[11px] text-neutral-300 font-semibold mt-1">
+              {credit_risk_ml.risk_tier}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 5: Volatility CV */}
+        <div className="card-mono flex flex-col justify-between col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
+            <span>Volatility (CV)</span>
+            <span className="cursor-pointer text-neutral-500 hover:text-white" title="Month-to-month coefficient of variation">ⓘ</span>
+          </div>
+          <div>
+            <p className="num-mono text-3xl font-extrabold text-white">
+              {income_synthesis.income_volatility_cv.toFixed(2)}
+            </p>
+            <p className="text-[11px] text-neutral-300 font-semibold mt-1">
+              {income_synthesis.income_volatility_cv < 0.25 ? 'High Cashflow Stability' : 'Moderate Volatility'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Reconstructed Monthly Cashflow Ledger (Monochrome Data Table Style) */}
+      <div className="bg-[#0E0E0E] border border-[#222222] rounded-2xl overflow-hidden shadow-card-subtle">
+        <div className="p-6 border-b border-[#222222] flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              Reconstructed Monthly Cashflow Ledger
+              <span className="px-2 py-0.5 rounded-full text-xs bg-black text-neutral-400 font-mono border border-[#262626]">
+                {income_synthesis.data_coverage_months} Months Verified
+              </span>
+            </h3>
+            <p className="text-xs text-neutral-400 mt-0.5 font-light">
+              Synthesized from normalized customer digital receipts and supplier expense debits.
+            </p>
+          </div>
+          <a 
+            href={`http://localhost:8000/api/reports/${assessment.assessment_id}/download`} 
+            target="_blank" 
+            rel="noreferrer"
+            className="text-xs font-semibold text-white hover:underline flex items-center gap-1.5 font-mono"
+          >
+            <span>↓</span> Official PDF Dossier
+          </a>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#0A0A0A] text-neutral-400 uppercase tracking-wider text-[11px] border-b border-[#222222]">
+              <tr>
+                <th className="py-3 px-6 font-semibold">Month Period</th>
+                <th className="py-3 px-6 font-semibold">Gross Receipts</th>
+                <th className="py-3 px-6 font-semibold">Operating Costs</th>
+                <th className="py-3 px-6 font-semibold">Debt EMI</th>
+                <th className="py-3 px-6 font-semibold">Net Operating Surplus</th>
+                <th className="py-3 px-6 font-semibold">Operating Margin</th>
+                <th className="py-3 px-6 font-semibold">Fidelity Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#222222] font-medium font-mono">
+              {income_synthesis.monthly_trend && income_synthesis.monthly_trend.length > 0 ? (
+                income_synthesis.monthly_trend.map((row) => {
+                  const margin = row.gross_receipts > 0 
+                    ? ((row.net_operating_surplus / row.gross_receipts) * 100).toFixed(1) 
+                    : '0.0';
+                  return (
+                    <tr key={row.month_period} className="hover:bg-[#141414] transition-colors">
+                      <td className="py-4 px-6 text-white">{row.month_period}</td>
+                      <td className="py-4 px-6 text-white">₹{Math.round(row.gross_receipts).toLocaleString()}</td>
+                      <td className="py-4 px-6 text-neutral-400">₹{Math.round(row.operating_expenses).toLocaleString()}</td>
+                      <td className="py-4 px-6 text-neutral-400">₹{Math.round(row.debt_emi_payments || 0).toLocaleString()}</td>
+                      <td className="py-4 px-6 text-white font-bold">₹{Math.round(row.net_operating_surplus).toLocaleString()}</td>
+                      <td className="py-4 px-6 text-neutral-300">{margin}%</td>
+                      <td className="py-4 px-6">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/10 text-white border border-white/20">
+                          VERIFIED
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="py-4 px-6 text-center text-neutral-500">
+                    No monthly breakdown records available.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Dual Bottom Section: SHAP Waterfall forces + Underwriting Checklist */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column: SHAP Feature Attributions */}
+        <div className="lg:col-span-7 bg-[#0E0E0E] border border-[#222222] rounded-2xl p-6 shadow-card-subtle flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 border-b border-[#222222]">
+              <div>
+                <span className="text-xs font-mono uppercase text-neutral-400">Explainable AI (XAI)</span>
+                <h3 className="text-base font-bold text-white mt-0.5">SHAP Feature Attribution Forces</h3>
+              </div>
+              <span className="text-xs text-neutral-500 font-mono">TreeExplainer Margin</span>
+            </div>
+
+            <p className="text-xs text-neutral-400 my-4 font-light">
+              Visualizing the directional impact of alternative cashflow features against the baseline model expectation.
+            </p>
+
+            {/* Attributions List */}
+            <div className="space-y-3 pt-2">
+              {credit_risk_ml.attributions && credit_risk_ml.attributions.length > 0 ? (
+                credit_risk_ml.attributions.map((a) => {
+                  const isPos = a.shap_value >= 0;
+                  const pct = Math.min(100, Math.round(Math.abs(a.shap_value) * 100));
+                  return (
+                    <div key={a.feature_name || a.feature_label} className="p-3 rounded-xl bg-black border border-[#222222]">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="font-semibold text-white">{a.feature_label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-neutral-500">
+                            {(a as any).feature_value_formatted || a.value_formatted || a.feature_value}
+                          </span>
+                          <span className="num-mono font-bold text-white">
+                            {isPos ? '+' : ''}{a.shap_value.toFixed(3)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full h-1 bg-[#222222] rounded-full overflow-hidden flex">
+                        <div
+                          className={`h-full rounded-full transition-all ${isPos ? 'bg-white' : 'bg-neutral-600'}`}
+                          style={{ width: `${pct}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-xs text-neutral-500">Attributions pending feature extraction.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-[#222222] text-xs text-neutral-500 font-mono">
+            Baseline Expectation: <strong className="text-white">{credit_risk_ml.baseline_expected_probability || 61.5}%</strong> • Calibrated Score: <strong className="text-white">{credit_risk_ml.repayment_probability_percent}%</strong>
+          </div>
+        </div>
+
+        {/* Right Column: Policy Underwriting Checklist */}
+        <div className="lg:col-span-5 bg-[#0E0E0E] border border-[#222222] rounded-2xl p-6 shadow-card-subtle flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 border-b border-[#222222]">
+              <div>
+                <span className="text-xs font-mono uppercase text-neutral-400">Underwriting Rules</span>
+                <h3 className="text-base font-bold text-white mt-0.5">Policy Criteria Checklist</h3>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-white border border-white/20 font-mono">
+                {underwriting_decision.passed_count ?? underwriting_decision.rules_passed_count ?? 5} / {underwriting_decision.total_rules_count ?? 5} PASSED
+              </span>
+            </div>
+
+            <div className="divide-y divide-[#222222] text-xs py-2">
+              {((underwriting_decision.criteria_evaluated || underwriting_decision.rule_results || []) as any[]).map((r: any) => {
+                const isPassed = r.is_passed !== undefined ? r.is_passed : r.passed;
+                const thresh = r.target_threshold || r.threshold_condition;
+                const actVal = r.actual_value_formatted || r.actual_value;
+                return (
+                  <div key={r.rule_id} className="py-3 flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold text-white">{r.rule_name}</p>
+                      <p className="text-neutral-500 text-[11px] font-mono">Threshold: {thresh}</p>
+                    </div>
+                    <span className={`font-bold text-xs font-mono ${isPassed ? 'text-white' : 'text-neutral-500'}`}>
+                      {isPassed ? '✓ PASSED' : '✗ FAILED'} ({actVal})
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-[#222222] space-y-2">
+            <a 
+              href={`/simulator?id=${assessment.assessment_id}`} 
+              className="w-full btn-white text-xs py-2.5 flex items-center justify-center"
+            >
+              Open What-If Simulator for {assessment.applicant_name.split(' ')[0]} ➔
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
