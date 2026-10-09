@@ -12,6 +12,10 @@ from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from backend.app.services.transaction_service import (
     parse_transaction_csv,
@@ -343,3 +347,41 @@ def download_digital_passport(assessment_id: str):
             "Content-Disposition": f"attachment; filename=Digital_Financial_Passport_{data['applicant_name'].replace(' ', '_')}.pdf"
         }
     )
+
+class ChatRequest(BaseModel):
+    message: str
+    assessment_id: Optional[str] = None
+    history: Optional[List[Dict[str, str]]] = []
+
+@app.post("/api/chat")
+def chat_with_ai(req: ChatRequest):
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not set in backend environment.")
+    
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    
+    context = ""
+    if req.assessment_id:
+        aid = req.assessment_id.strip()
+        data = None
+        if aid in ASSESSMENT_STORE:
+            data = ASSESSMENT_STORE[aid]
+        elif aid.lower() in ["ramesh", "priya", "arun"]:
+            df, meta = load_preset_transactions(aid.lower())
+            res = _orchestrate_assessment(df, meta["min_balance"], meta["name"], meta["business"], meta["type"])
+            data = res.dict()
+        elif "latest" in ASSESSMENT_STORE:
+            data = ASSESSMENT_STORE["latest"]
+        
+        if data:
+            context = f"The user is viewing the assessment for {data['applicant_name']} (Business: {data['business_name']}). Financial Health Score: {data['financial_health_score']['overall_score']}. Credit Risk Repayment Probability: {data['credit_risk_ml']['repayment_probability_percent']}%. Underwriting Status: {data['underwriting_decision']['decision_status']}."
+    
+    prompt = f"System Context: You are a helpful AI assistant for a loan officer portal. {context}\n\nUser Message: {req.message}"
+    
+    try:
+        response = model.generate_content(prompt)
+        return {"reply": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
