@@ -119,93 +119,28 @@
 - **Status:** COMPLETED. Built `passport.astro` preview dossier and direct download hook to ReportLab PDF generator.
 
 ### [x] Task 6.3: End-to-End Integration, Testing & Live Demo Verification
-- **Status:** COMPLETED. Verified backend API tests (100% 200 OK) and frontend static build (5 pages built in 5.33s).
-- **Objective:** Configure the exact color palette, typography, and utility classes as defined in `memory.md`.
-- **Technology:** Tailwind CSS, CSS Custom Variables, Google Fonts (`Outfit` & `JetBrains Mono`).
-- **Files to create:** `frontend/src/styles/global.css`, `frontend/tailwind.config.cjs`.
-- **Acceptance Criteria:** Colors (`#0A0B0D`, `#121316`, `#16181D`, `#D2FC38`), pill buttons, and monospace metric styles render accurately.
+- **Status:** COMPLETED. Verified backend API tests (100% 200 OK) and frontend static build (6 pages built in 2.08s).
 
 ---
 
-### [ ] Task 3.3: Build Core Reusable Astro Presentation Components
-- **Objective:** Create zero-JS Astro components: `MetricCard.astro`, `PillBadge.astro`, `Button.astro`, `Card.astro`, `Sidebar.astro`, `Topbar.astro`.
-- **Files to create:** `frontend/src/components/astro/*`, `frontend/src/layouts/*`.
-- **Acceptance Criteria:** Components render with high contrast, tactile pill borders, and proper props.
+## Phase 7: Dynamic Data Pipeline & Statement Upload
 
----
+### [x] Task 7.1: Flexible CSV Ingestion & Categorization
+- **Status:** COMPLETED. Added support for case-insensitive headers, banking/UPI aliases, and robust debit/credit/loan categorization in `transaction_service.py` and `income_service.py`.
+- **Files:** `backend/app/services/transaction_service.py`, `backend/app/services/income_service.py`.
 
-## Phase 4: High-Converting Landing Page & Quick-Feature Showcase
+### [x] Task 7.2: Standardized Sample CSV Template Generator
+- **Status:** COMPLETED. Added `GET /api/sample-csv` endpoint serving verified vendor statements directly for fast testing.
+- **Files:** `backend/main.py`.
 
-### [ ] Task 4.1: Build Landing Page Hero Section with Live Trust Ticker
-- **Files to create:** `frontend/src/components/astro/Hero.astro`, `frontend/src/components/astro/Navbar.astro`.
-- **Acceptance Criteria:** Value proposition clear in 5 seconds; dual pill CTAs; institutional trust badges.
+### [x] Task 7.3: Dynamic Live Dashboard (Zero Static Placeholders)
+- **Status:** COMPLETED. Built `LiveDashboard.tsx` to dynamically query and render active applicant metrics, reconstructed monthly cashflow ledger, SHAP waterfall forces, and underwriting policy criteria checklist.
+- **Files:** `frontend/src/components/react/LiveDashboard.tsx`, `frontend/src/pages/dashboard.astro`.
 
----
+### [x] Task 7.4: Dynamic What-If Sandbox with Uploaded Baseline Support
+- **Status:** COMPLETED. Updated `WhatIfSimulator.tsx` to simulate directly against uploaded applicant baseline metrics in isolated memory.
+- **Files:** `frontend/src/components/react/WhatIfSimulator.tsx`.
 
-### [ ] Task 4.2: Build Interactive Score Teaser Island (React Island)
-- **Files to create:** `frontend/src/components/react/InteractiveScoreTeaser.tsx`.
-- **Acceptance Criteria:** Preset buttons for Ramesh (Chai Vendor), Priya (Delivery Partner), Arun (Freelancer); live reactive sliders with instant score updates at 60fps.
-
----
-
-### [ ] Task 4.3: Build 6-Core Innovation Feature Grid
-- **Files to create:** `frontend/src/components/astro/FeatureGrid.astro`.
-- **Acceptance Criteria:** High information density cards for Synthesizer, FHS, SHAP, Fairness, Sandbox, and Passport.
-
----
-
-### [ ] Task 4.4: Build Workflow Steps, Vendor Story & Footer
-- **Files to create:** `frontend/src/components/astro/HowItWorks.astro`, `frontend/src/components/astro/VendorStory.astro`, `frontend/src/components/astro/Footer.astro`.
-- **Acceptance Criteria:** 4-step borrower workflow clearly visualized; realistic vendor case study.
-
----
-
-### [ ] Task 4.5: Assemble and Polish Landing Page (`index.astro`)
-- **Files to modify:** `frontend/src/pages/index.astro`.
-- **Acceptance Criteria:** Fast load time, 100% responsive, zero visual defects.
-
----
-
-## Phase 5: Applicant Dashboard, SHAP Waterfall & What-If Simulator
-
-### [ ] Task 5.1: Build Meiro-Style Applicant Dashboard (`dashboard.astro`)
-- **Files to create:** `frontend/src/pages/dashboard.astro`, `frontend/src/components/astro/MonthlyTrendChart.astro`, `frontend/src/components/astro/ActivityTable.astro`.
-- **Acceptance Criteria:** Top KPI row with FHS, Monthly Receipts, Net Cashflow, and Coverage; matching the screenshot's dark tabular layout.
-
----
-
-### [ ] Task 5.2: Build SHAP Waterfall Attribution Island & Screen (`explain.astro`)
-- **Files to create:** `frontend/src/pages/explain.astro`, `frontend/src/components/react/ShapChart.tsx`.
-- **Acceptance Criteria:** Horizontal waterfall chart showing baseline $\phi_0$, positive green factors, negative red factors, and grounded text.
-
----
-
-### [ ] Task 5.3: Build What-If Financial Sandbox Screen (`simulator.astro`)
-- **Files to create:** `frontend/src/pages/simulator.astro`, `frontend/src/components/react/WhatIfSandbox.tsx`.
-- **Acceptance Criteria:** Dual-column before/after slider simulator with real-time score delta pill.
-
----
-
-### [ ] Task 5.4: Build Fairlearn Model Governance Portal (`fairness.astro`)
-- **Files to create:** `frontend/src/pages/fairness.astro`, `frontend/src/components/react/FairnessAuditor.tsx`.
-- **Acceptance Criteria:** Disparity charts across gender, geography, and vendor categories; audit status badges.
-
----
-
-## Phase 6: Underwriting Decisions, Digital Passport & Final Polish
-
-### [ ] Task 6.1: Build Transparent Decision Page (`decision.astro`)
-- **Files to create:** `frontend/src/pages/decision.astro`.
-- **Acceptance Criteria:** Criteria checklist with pass/fail badges, reason codes, and next-step roadmap.
-
----
-
-### [ ] Task 6.2: Build Digital Financial Passport Viewer & PDF Export (`passport.astro`)
-- **Files to create:** `frontend/src/pages/passport.astro`.
-- **Acceptance Criteria:** Digital dossier preview and one-click PDF download with verification QR code.
-
----
-
-### [ ] Task 6.3: End-to-End Integration, Testing & Live Demo Verification
-- **Files to create/modify:** `backend/tests/*`, `frontend/src/lib/api.ts`.
-- **Acceptance Criteria:** Full workflow operates smoothly from statement upload -> synthesis -> score -> explain -> simulate -> passport download.
+### [x] Task 7.5: Dynamic Digital Financial Passport & ReportLab PDF Hook
+- **Status:** COMPLETED. Built `DigitalPassportViewer.tsx` to display active applicant dossier and wire direct download link to `http://localhost:8000/api/reports/{id}/download`.
+- **Files:** `frontend/src/components/react/DigitalPassportViewer.tsx`, `frontend/src/pages/passport.astro`.

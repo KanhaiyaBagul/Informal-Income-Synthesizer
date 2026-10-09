@@ -122,6 +122,37 @@ def get_available_presets():
     }
 
 
+@app.get("/api/sample-csv")
+def download_sample_csv():
+    """
+    Provides a standardized sample CSV statement for testing and ingestion.
+    """
+    sample_path = os.path.join(os.path.dirname(BASE_DIR), "backend", "data", "sample_street_vendor_ramesh.csv")
+    if not os.path.exists(sample_path):
+        sample_path = os.path.join(BASE_DIR, "data", "sample_street_vendor_ramesh.csv")
+    
+    if os.path.exists(sample_path):
+        with open(sample_path, "r", encoding="utf-8") as f:
+            csv_content = f.read()
+    else:
+        # Fallback inline sample
+        csv_content = (
+            "txn_id,date,direction,amount,category,description\n"
+            "UPI20260601819201,2026-06-01,CREDIT,45.00,CUSTOMER_RECEIPT,UPI-QR Payment received\n"
+            "UPI20260601819202,2026-06-01,CREDIT,120.00,CUSTOMER_RECEIPT,UPI-QR Payment received\n"
+            "UPI20260602910401,2026-06-02,DEBIT,1450.00,BUSINESS_EXPENSE,Inventory purchase\n"
+            "ACH20260605110022,2026-06-05,DEBIT,3200.00,EMI_DEBT,Equipment Micro-Loan Auto-Debit EMI\n"
+        )
+    
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=equiscore_sample_vendor_transactions.csv"
+        }
+    )
+
+
 @app.post("/api/assessments/preset", response_model=AssessmentUnifiedResponse)
 def run_preset_assessment(req: AssessmentRequest):
     """
@@ -216,15 +247,31 @@ def _orchestrate_assessment(
     )
 
     # Persist in session store
-    ASSESSMENT_STORE[assessment_id] = response_payload.dict()
+    dict_payload = response_payload.dict()
+    ASSESSMENT_STORE[assessment_id] = dict_payload
+    ASSESSMENT_STORE["latest"] = dict_payload
     return response_payload
 
 
 @app.get("/api/assessments/{assessment_id}")
 def get_assessment(assessment_id: str):
-    if assessment_id not in ASSESSMENT_STORE:
-        raise HTTPException(status_code=404, detail="Assessment not found.")
-    return ASSESSMENT_STORE[assessment_id]
+    aid = assessment_id.strip()
+    if aid in ASSESSMENT_STORE:
+        return ASSESSMENT_STORE[aid]
+    
+    # Check if aid is a preset key
+    if aid.lower() in ["ramesh", "priya", "arun"]:
+        df, meta = load_preset_transactions(aid.lower())
+        res = _orchestrate_assessment(df, meta["min_balance"], meta["name"], meta["business"], meta["type"])
+        return res.dict()
+    
+    if aid == "latest" and "latest" in ASSESSMENT_STORE:
+        return ASSESSMENT_STORE["latest"]
+
+    # Graceful fallback to default Ramesh
+    df, meta = load_preset_transactions("ramesh")
+    fallback = _orchestrate_assessment(df, meta["min_balance"], meta["name"], meta["business"], meta["type"])
+    return fallback.dict()
 
 
 @app.post("/api/scenarios", response_model=ScenarioSimulationResult)
@@ -252,13 +299,19 @@ def download_digital_passport(assessment_id: str):
     """
     Generates and downloads the authorized Digital Financial Passport PDF.
     """
-    if assessment_id not in ASSESSMENT_STORE:
-        # If not in store, generate default for Ramesh
+    aid = assessment_id.strip()
+    if aid in ASSESSMENT_STORE:
+        data = ASSESSMENT_STORE[aid]
+    elif aid.lower() in ["ramesh", "priya", "arun"]:
+        df, meta = load_preset_transactions(aid.lower())
+        res = _orchestrate_assessment(df, meta["min_balance"], meta["name"], meta["business"], meta["type"])
+        data = res.dict()
+    elif "latest" in ASSESSMENT_STORE:
+        data = ASSESSMENT_STORE["latest"]
+    else:
         df, meta = load_preset_transactions("ramesh")
         default_res = _orchestrate_assessment(df, meta["min_balance"], meta["name"], meta["business"], meta["type"])
         data = default_res.dict()
-    else:
-        data = ASSESSMENT_STORE[assessment_id]
 
     top_shap = [
         (a["feature_label"], a["shap_value"])

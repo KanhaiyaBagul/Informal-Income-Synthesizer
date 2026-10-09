@@ -46,10 +46,17 @@ def synthesize_income_from_transactions(
     df["month_period"] = df["date"].dt.strftime("%Y-%m")
     
     # Categorize credits and debits
-    # Exclude internal self-transfers, reversals
+    # Receipts: credits excluding internal transfers and reversals
     receipts_df = df[(df["direction"] == "CREDIT") & (~df["category"].str.contains("TRANSFER|REVERSAL", case=False, na=False))]
-    expenses_df = df[(df["direction"] == "DEBIT") & (df["category"].str.contains("BUSINESS_EXPENSE|OPERATIONAL|UTILITY", case=False, na=False))]
-    emi_df = df[(df["direction"] == "DEBIT") & (df["category"].str.contains("EMI|LOAN", case=False, na=False))]
+    # EMI/Debt: debits matching loan, emi, repayment, finance
+    is_emi = (df["direction"] == "DEBIT") & (
+        df["category"].str.contains("EMI|LOAN|REPAYMENT|FINANCE|BORROW|INSTALLMENT", case=False, na=False) |
+        df["description"].str.contains("EMI|LOAN|REPAYMENT|FINANCE|BORROW|INSTALLMENT", case=False, na=False)
+    )
+    emi_df = df[is_emi]
+    # Operating expenses: all other debits excluding transfers, reversals, and EMI
+    is_transfer = df["category"].str.contains("TRANSFER|REVERSAL|REFUND", case=False, na=False)
+    expenses_df = df[(df["direction"] == "DEBIT") & (~is_emi) & (~is_transfer)]
 
     all_months = sorted(df["month_period"].unique())
     monthly_summaries: List[MonthlyIncomeSummary] = []
