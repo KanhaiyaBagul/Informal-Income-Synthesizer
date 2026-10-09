@@ -58,6 +58,22 @@ export default function DigitalPassportViewer() {
   const [activeTab, setActiveTab] = useState<string>('ramesh');
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const queryId = params.get('id');
+
+    if (queryId) {
+      fetch(`http://localhost:8000/api/assessments/${queryId}`)
+        .then(res => res.json())
+        .then(parsed => {
+          setData(parsed);
+          setHasCustom(true);
+          setActiveTab('custom');
+          localStorage.setItem('equiscore_current_assessment', JSON.stringify(parsed));
+        })
+        .catch(e => console.warn('Failed to fetch assessment for passport', e));
+      return;
+    }
+
     const cached = localStorage.getItem('equiscore_current_assessment');
     if (cached) {
       try {

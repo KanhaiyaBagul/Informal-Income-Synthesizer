@@ -63,30 +63,48 @@ export default function WhatIfSimulator() {
 
   // Check for uploaded assessment in localStorage or query params
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const queryId = params.get('id');
+
+    const loadProfileFromData = (d: any) => {
+      const customProfile: ActiveProfile = {
+        key: 'uploaded',
+        name: d.applicant_name,
+        business: d.business_name,
+        type: d.business_type.replace('_', ' '),
+        gross: Math.round(d.income_synthesis.average_monthly_gross_receipts),
+        expenses: Math.round(d.income_synthesis.average_monthly_expenses),
+        surplus: Math.round(d.income_synthesis.average_monthly_net_surplus),
+        emi: Math.round(d.income_synthesis.average_monthly_debt_emi || 0),
+        fhs: d.financial_health_score.overall_score,
+        prob: d.credit_risk_ml.repayment_probability_percent,
+        cv: Number(d.income_synthesis.income_volatility_cv.toFixed(2))
+      };
+
+      setProfiles((prev) => ({
+        ...prev,
+        uploaded: customProfile
+      }));
+      setHasCustomUploaded(true);
+      setActiveKey('uploaded');
+    };
+
+    if (queryId) {
+      fetch(`http://localhost:8000/api/assessments/${queryId}`)
+        .then(res => res.json())
+        .then(d => {
+          loadProfileFromData(d);
+          localStorage.setItem('equiscore_current_assessment', JSON.stringify(d));
+        })
+        .catch(err => console.warn('Could not fetch assessment for simulator', err));
+      return;
+    }
+
     const cached = localStorage.getItem('equiscore_current_assessment');
     if (cached) {
       try {
         const d = JSON.parse(cached);
-        const customProfile: ActiveProfile = {
-          key: 'uploaded',
-          name: d.applicant_name,
-          business: d.business_name,
-          type: d.business_type.replace('_', ' '),
-          gross: Math.round(d.income_synthesis.average_monthly_gross_receipts),
-          expenses: Math.round(d.income_synthesis.average_monthly_expenses),
-          surplus: Math.round(d.income_synthesis.average_monthly_net_surplus),
-          emi: Math.round(d.income_synthesis.average_monthly_debt_emi || 0),
-          fhs: d.financial_health_score.overall_score,
-          prob: d.credit_risk_ml.repayment_probability_percent,
-          cv: Number(d.income_synthesis.income_volatility_cv.toFixed(2))
-        };
-
-        setProfiles((prev) => ({
-          ...prev,
-          uploaded: customProfile
-        }));
-        setHasCustomUploaded(true);
-        setActiveKey('uploaded');
+        loadProfileFromData(d);
       } catch (err) {
         console.warn('Could not load custom assessment in simulator', err);
       }
