@@ -51,41 +51,38 @@ To audit algorithmic fairness without leaking protected features into model trai
 
 ---
 
-## 3. Visual Design System & Color Tokens
+## 3. Visual Design System & Color Tokens (Black & White Minimalist)
 
-Extracted directly from the design reference screenshot:
+**Active Git Branch:** `feature/black-and-white-ui`  
+**Design Style:** Stark Monochrome Minimalist (High contrast, editorial Swiss design, Apple/Vercel/Linear precision)
 
 ```
 +-----------------------------------------------------------------------------------------+
 |                                    PALETTE SWATCHES                                     |
 +--------------------+--------------------+--------------------+--------------------------+
-| Canvas Dark        | Surface / Card     | Border / Stroke    | Electric Lime Accent     |
-| #0A0B0D            | #121316 / #16181D  | #22252B / #2C3038  | #D2FC38 / #C8F53C        |
+| Canvas Pitch Black | Elevated Surface   | Border / Stroke    | Stark White Accent       |
+| #000000            | #0A0A0A / #121212  | #222222 / #333333  | #FFFFFF                  |
 +--------------------+--------------------+--------------------+--------------------------+
-| Text Primary       | Text Muted         | Gradient Pill      | Status Positive / Alert  |
-| #FFFFFF            | #8F96A3 / #64748B  | #FDE047 -> #A78BFA | #34D399 (Green) / #F87171|
+| Text Primary       | Text Secondary     | Text Muted         | Status Indicators        |
+| #FFFFFF            | #A1A1AA (Zinc 400) | #71717A (Zinc 500) | #FFFFFF / #D4D4D8        |
 +-----------------------------------------------------------------------------------------+
 ```
 
 ### Exact CSS Variables
 ```css
 :root {
-  --bg-canvas: #0A0B0D;
-  --bg-surface: #121316;
-  --bg-card: #16181D;
-  --bg-card-hover: #1C1F26;
-  --border-subtle: #22252B;
-  --border-focus: #2D323B;
-  --accent-lime: #D2FC38;
-  --accent-lime-hover: #E2FD66;
-  --accent-text: #0A0B0D;
+  --bg-canvas: #000000;
+  --bg-surface: #0A0A0A;
+  --bg-card: #121212;
+  --bg-card-hover: #181818;
+  --border-subtle: #222222;
+  --border-focus: #333333;
+  --border-strong: #444444;
+  --accent-white: #FFFFFF;
+  --accent-text: #000000;
   --text-primary: #FFFFFF;
-  --text-secondary: #9CA3AF;
-  --text-muted: #64748B;
-  --pill-gradient: linear-gradient(135deg, #FDE047 0%, #F472B6 50%, #A78BFA 100%);
-  --positive: #34D399;
-  --caution: #FBBF24;
-  --negative: #F87171;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
 }
 ```
 

@@ -2,7 +2,6 @@
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { PRESETS, MOCK_SHAP_RAMESH, MOCK_MONTHLY_TREND } from '../lib/mockData';
 
-// Extract requested persona from URL query
 const url = Astro.url;
 const personaKey = (url.searchParams.get('persona') || 'ramesh').toLowerCase();
 const p = PRESETS[personaKey] || PRESETS.ramesh;
@@ -18,104 +17,107 @@ const p = PRESETS[personaKey] || PRESETS.ramesh;
   <!-- Welcome & Profile Header -->
   <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
     <div>
-      <span class="text-xs uppercase font-mono tracking-wider text-lime">Verified Dossier</span>
+      <span class="text-xs uppercase font-mono tracking-wider text-neutral-400">Verified Dossier</span>
       <h2 class="text-2xl font-bold text-white mt-0.5">{p.name} — {p.business}</h2>
-      <p class="text-xs text-text-secondary mt-1">
+      <p class="text-xs text-text-secondary mt-1 font-light">
         Archetype: <span class="text-white font-medium">{p.type}</span> • 4 Months Ingested Records • UPI Statements Verified
       </p>
     </div>
 
     <div class="flex items-center gap-2">
-      <span class="px-3 py-1 rounded-full text-xs font-semibold bg-[#16181D] border border-[#22252B] text-text-secondary">
-        Status: <strong class="text-lime">{p.decision}</strong>
+      <span class="px-3 py-1 rounded-full text-xs font-semibold bg-[#121212] border border-[#262626] text-white font-mono">
+        Status: <strong>{p.decision}</strong>
       </span>
-      <a href="http://localhost:8000/api/reports/demo/download" target="_blank" class="btn-dark text-xs py-1.5 px-3">
+      <a href="/upload" class="btn-dark text-xs py-1.5 px-3">
+        Upload Different Data
+      </a>
+      <a href="http://localhost:8000/api/reports/demo/download" target="_blank" class="btn-white text-xs py-1.5 px-3">
         Download PDF Passport
       </a>
     </div>
   </div>
 
-  <!-- Meiro Top Metric Cards Row (Matching Screenshot Style) -->
+  <!-- Monochrome Top Metric Cards Row -->
   <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
     <!-- Card 1: FHS Score -->
-    <div class="card-meiro flex flex-col justify-between">
-      <div class="flex items-center justify-between text-xs text-text-secondary mb-2">
+    <div class="card-mono flex flex-col justify-between">
+      <div class="flex items-center justify-between text-xs text-neutral-400 mb-2">
         <span>Health Score</span>
-        <span class="cursor-pointer text-text-muted hover:text-white" title="Deterministic 5-pillar composite index">ⓘ</span>
+        <span class="cursor-pointer text-neutral-500 hover:text-white" title="Deterministic 5-pillar composite index">ⓘ</span>
       </div>
       <div>
-        <p class="num-mono text-3xl font-extrabold text-white">{p.fhs}<span class="text-text-muted text-sm font-normal">/100</span></p>
-        <p class="text-[11px] text-lime font-semibold mt-1">Prime Stable Band</p>
+        <p class="num-mono text-3xl font-extrabold text-white">{p.fhs}<span class="text-neutral-500 text-sm font-normal">/100</span></p>
+        <p class="text-[11px] text-neutral-300 font-semibold mt-1">Prime Stable Band</p>
       </div>
     </div>
 
     <!-- Card 2: Monthly Gross Receipts -->
-    <div class="card-meiro flex flex-col justify-between">
-      <div class="flex items-center justify-between text-xs text-text-secondary mb-2">
+    <div class="card-mono flex flex-col justify-between">
+      <div class="flex items-center justify-between text-xs text-neutral-400 mb-2">
         <span>Monthly Gross</span>
-        <span class="cursor-pointer text-text-muted hover:text-white" title="Average customer digital receipts">ⓘ</span>
+        <span class="cursor-pointer text-neutral-500 hover:text-white" title="Average customer digital receipts">ⓘ</span>
       </div>
       <div>
         <p class="num-mono text-3xl font-extrabold text-white">₹{p.gross.toLocaleString()}</p>
-        <p class="text-[11px] text-text-secondary mt-1">315 monthly UPI txns</p>
+        <p class="text-[11px] text-neutral-400 mt-1 font-mono">315 monthly UPI txns</p>
       </div>
     </div>
 
     <!-- Card 3: Net Cash Surplus -->
-    <div class="card-meiro flex flex-col justify-between">
-      <div class="flex items-center justify-between text-xs text-text-secondary mb-2">
+    <div class="card-mono flex flex-col justify-between">
+      <div class="flex items-center justify-between text-xs text-neutral-400 mb-2">
         <span>Net Surplus</span>
-        <span class="cursor-pointer text-text-muted hover:text-white" title="Gross receipts minus operating costs">ⓘ</span>
+        <span class="cursor-pointer text-neutral-500 hover:text-white" title="Gross receipts minus operating costs">ⓘ</span>
       </div>
       <div>
-        <p class="num-mono text-3xl font-extrabold text-lime">₹{p.surplus.toLocaleString()}</p>
-        <p class="text-[11px] text-text-secondary mt-1">{((p.surplus / p.gross) * 100).toFixed(1)}% operating margin</p>
+        <p class="num-mono text-3xl font-extrabold text-white">₹{p.surplus.toLocaleString()}</p>
+        <p class="text-[11px] text-neutral-400 mt-1 font-mono">{((p.surplus / p.gross) * 100).toFixed(1)}% operating margin</p>
       </div>
     </div>
 
     <!-- Card 4: Repayment Confidence -->
-    <div class="card-meiro flex flex-col justify-between">
-      <div class="flex items-center justify-between text-xs text-text-secondary mb-2">
+    <div class="card-mono flex flex-col justify-between">
+      <div class="flex items-center justify-between text-xs text-neutral-400 mb-2">
         <span>ML Confidence</span>
-        <span class="cursor-pointer text-text-muted hover:text-white" title="Calibrated XGBoost repayment probability">ⓘ</span>
+        <span class="cursor-pointer text-neutral-500 hover:text-white" title="Calibrated XGBoost repayment probability">ⓘ</span>
       </div>
       <div>
         <p class="num-mono text-3xl font-extrabold text-white">{p.prob}%</p>
-        <p class="text-[11px] text-lime font-semibold mt-1">{p.tier}</p>
+        <p class="text-[11px] text-neutral-300 font-semibold mt-1">{p.tier}</p>
       </div>
     </div>
 
     <!-- Card 5: Volatility CV -->
-    <div class="card-meiro flex flex-col justify-between col-span-2 sm:col-span-1">
-      <div class="flex items-center justify-between text-xs text-text-secondary mb-2">
+    <div class="card-mono flex flex-col justify-between col-span-2 sm:col-span-1">
+      <div class="flex items-center justify-between text-xs text-neutral-400 mb-2">
         <span>Volatility (CV)</span>
-        <span class="cursor-pointer text-text-muted hover:text-white" title="Month-to-month coefficient of variation">ⓘ</span>
+        <span class="cursor-pointer text-neutral-500 hover:text-white" title="Month-to-month coefficient of variation">ⓘ</span>
       </div>
       <div>
         <p class="num-mono text-3xl font-extrabold text-white">{p.cv}</p>
-        <p class="text-[11px] text-positive font-semibold mt-1">High Cashflow Stability</p>
+        <p class="text-[11px] text-neutral-300 font-semibold mt-1">High Cashflow Stability</p>
       </div>
     </div>
   </div>
 
-  <!-- Reconstructed Monthly Cashflow Ledger (Meiro Data Table Style) -->
-  <div class="bg-[#16181D] border border-[#22252B] rounded-2xl overflow-hidden shadow-card-subtle">
-    <div class="p-6 border-b border-[#22252B] flex items-center justify-between">
+  <!-- Reconstructed Monthly Cashflow Ledger (Monochrome Data Table Style) -->
+  <div class="bg-[#0E0E0E] border border-[#222222] rounded-2xl overflow-hidden shadow-card-subtle">
+    <div class="p-6 border-b border-[#222222] flex items-center justify-between">
       <div>
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           Reconstructed Monthly Cashflow Ledger
-          <span class="px-2 py-0.5 rounded-full text-xs bg-[#22252B] text-text-secondary font-mono">4 Months Verified</span>
+          <span class="px-2 py-0.5 rounded-full text-xs bg-black text-neutral-400 font-mono border border-[#262626]">4 Months Verified</span>
         </h3>
-        <p class="text-xs text-text-secondary mt-0.5">Synthesized from customer digital QR receipts and supplier expense debits.</p>
+        <p class="text-xs text-neutral-400 mt-0.5 font-light">Synthesized from customer digital QR receipts and supplier expense debits.</p>
       </div>
-      <a href="http://localhost:8000/api/reports/demo/download" target="_blank" class="text-xs font-semibold text-lime hover:underline flex items-center gap-1.5">
+      <a href="http://localhost:8000/api/reports/demo/download" target="_blank" class="text-xs font-semibold text-white hover:underline flex items-center gap-1.5 font-mono">
         <span>↓</span> Download CSV
       </a>
     </div>
 
     <div class="overflow-x-auto">
       <table class="w-full text-left text-xs">
-        <thead class="bg-[#121316] text-text-secondary uppercase tracking-wider text-[11px] border-b border-[#22252B]">
+        <thead class="bg-[#0A0A0A] text-neutral-400 uppercase tracking-wider text-[11px] border-b border-[#222222]">
           <tr>
             <th class="py-3 px-6 font-semibold">Month Period</th>
             <th class="py-3 px-6 font-semibold">Gross Receipts</th>
@@ -125,18 +127,18 @@ const p = PRESETS[personaKey] || PRESETS.ramesh;
             <th class="py-3 px-6 font-semibold">Fidelity Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-[#22252B]/60 font-medium">
+        <tbody class="divide-y divide-[#222222] font-medium font-mono">
           {MOCK_MONTHLY_TREND.map((row) => {
             const margin = ((row.surplus / row.gross) * 100).toFixed(1);
             return (
-              <tr class="hover:bg-[#1C1F26]/60 transition-colors">
-                <td class="py-4 px-6 font-mono text-white">{row.month}</td>
-                <td class="py-4 px-6 font-mono text-white">₹{row.gross.toLocaleString()}</td>
-                <td class="py-4 px-6 font-mono text-text-secondary">₹{row.expenses.toLocaleString()}</td>
-                <td class="py-4 px-6 font-mono text-lime font-bold">₹{row.surplus.toLocaleString()}</td>
-                <td class="py-4 px-6 font-mono text-white">{margin}%</td>
+              <tr class="hover:bg-[#141414] transition-colors">
+                <td class="py-4 px-6 text-white">{row.month}</td>
+                <td class="py-4 px-6 text-white">₹{row.gross.toLocaleString()}</td>
+                <td class="py-4 px-6 text-neutral-400">₹{row.expenses.toLocaleString()}</td>
+                <td class="py-4 px-6 text-white font-bold">₹{row.surplus.toLocaleString()}</td>
+                <td class="py-4 px-6 text-neutral-300">{margin}%</td>
                 <td class="py-4 px-6">
-                  <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-positive/10 text-positive border border-positive/20">
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/10 text-white border border-white/20">
                     VERIFIED
                   </span>
                 </td>
@@ -151,17 +153,17 @@ const p = PRESETS[personaKey] || PRESETS.ramesh;
   <!-- Dual Bottom Section: SHAP Waterfall forces + Underwriting Checklist -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
     <!-- Left Column: SHAP Feature Attributions -->
-    <div class="lg:col-span-7 bg-[#16181D] border border-[#22252B] rounded-2xl p-6 shadow-card-subtle flex flex-col justify-between">
+    <div class="lg:col-span-7 bg-[#0E0E0E] border border-[#222222] rounded-2xl p-6 shadow-card-subtle flex flex-col justify-between">
       <div>
-        <div class="flex items-center justify-between pb-4 border-b border-[#22252B]">
+        <div class="flex items-center justify-between pb-4 border-b border-[#222222]">
           <div>
-            <span class="text-xs font-mono uppercase text-lime">Explainable AI (XAI)</span>
+            <span class="text-xs font-mono uppercase text-neutral-400">Explainable AI (XAI)</span>
             <h3 class="text-base font-bold text-white mt-0.5">SHAP Feature Attribution Forces</h3>
           </div>
-          <span class="text-xs text-text-muted font-mono">TreeExplainer Margin</span>
+          <span class="text-xs text-neutral-500 font-mono">TreeExplainer Margin</span>
         </div>
 
-        <p class="text-xs text-text-secondary my-4">
+        <p class="text-xs text-neutral-400 my-4 font-light">
           Visualizing the directional impact of alternative cashflow features against the baseline model expectation.
         </p>
 
@@ -171,19 +173,19 @@ const p = PRESETS[personaKey] || PRESETS.ramesh;
             const isPos = a.shap_value >= 0;
             const pct = Math.min(100, Math.round(Math.abs(a.shap_value) * 80));
             return (
-              <div class="p-3 rounded-xl bg-[#0A0B0D] border border-[#22252B]">
+              <div class="p-3 rounded-xl bg-black border border-[#222222]">
                 <div class="flex items-center justify-between text-xs mb-1.5">
                   <span class="font-semibold text-white">{a.feature_label}</span>
                   <div class="flex items-center gap-2">
-                    <span class="font-mono text-text-muted">{a.value_formatted}</span>
-                    <span class={`num-mono font-bold ${isPos ? 'text-positive' : 'text-negative'}`}>
+                    <span class="font-mono text-neutral-500">{a.value_formatted}</span>
+                    <span class="num-mono font-bold text-white">
                       {isPos ? '+' : ''}{a.shap_value.toFixed(3)}
                     </span>
                   </div>
                 </div>
-                <div class="w-full h-1.5 bg-[#22252B] rounded-full overflow-hidden flex">
+                <div class="w-full h-1 bg-[#222222] rounded-full overflow-hidden flex">
                   <div
-                    class={`h-full rounded-full transition-all ${isPos ? 'bg-positive' : 'bg-negative'}`}
+                    class={`h-full rounded-full transition-all ${isPos ? 'bg-white' : 'bg-neutral-600'}`}
                     style={`width: ${pct}%`}
                   ></div>
                 </div>
@@ -193,69 +195,69 @@ const p = PRESETS[personaKey] || PRESETS.ramesh;
         </div>
       </div>
 
-      <div class="mt-6 pt-4 border-t border-[#22252B] text-xs text-text-muted">
-        Baseline Population Expectation: <strong class="text-white">61.5%</strong> • Reconstructed Prediction: <strong class="text-lime">{p.prob}%</strong>
+      <div class="mt-6 pt-4 border-t border-[#222222] text-xs text-neutral-500 font-mono">
+        Baseline Population Expectation: <strong class="text-white">61.5%</strong> • Reconstructed Prediction: <strong class="text-white">{p.prob}%</strong>
       </div>
     </div>
 
     <!-- Right Column: Policy Underwriting Checklist -->
-    <div class="lg:col-span-5 bg-[#16181D] border border-[#22252B] rounded-2xl p-6 shadow-card-subtle flex flex-col justify-between">
+    <div class="lg:col-span-5 bg-[#0E0E0E] border border-[#222222] rounded-2xl p-6 shadow-card-subtle flex flex-col justify-between">
       <div>
-        <div class="flex items-center justify-between pb-4 border-b border-[#22252B]">
+        <div class="flex items-center justify-between pb-4 border-b border-[#222222]">
           <div>
-            <span class="text-xs font-mono uppercase text-lime">Underwriting Rules</span>
+            <span class="text-xs font-mono uppercase text-neutral-400">Underwriting Rules</span>
             <h3 class="text-base font-bold text-white mt-0.5">Policy Criteria Checklist</h3>
           </div>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-positive/10 text-positive border border-positive/20">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-white border border-white/20 font-mono">
             5 / 5 PASSED
           </span>
         </div>
 
-        <div class="divide-y divide-[#22252B]/60 text-xs py-2">
+        <div class="divide-y divide-[#222222] text-xs py-2">
           <div class="py-3 flex items-start justify-between">
             <div>
               <p class="font-semibold text-white">Min. Monthly Surplus</p>
-              <p class="text-text-muted text-[11px]">Threshold: &gt;= ₹6,000/mo</p>
+              <p class="text-neutral-500 text-[11px] font-mono">Threshold: &gt;= ₹6,000/mo</p>
             </div>
-            <span class="text-positive font-bold text-xs">✓ PASSED (₹20,067)</span>
+            <span class="text-white font-bold text-xs font-mono">✓ PASSED (₹20,067)</span>
           </div>
 
           <div class="py-3 flex items-start justify-between">
             <div>
               <p class="font-semibold text-white">Composite FHS Threshold</p>
-              <p class="text-text-muted text-[11px]">Threshold: &gt;= 65 / 100</p>
+              <p class="text-neutral-500 text-[11px] font-mono">Threshold: &gt;= 65 / 100</p>
             </div>
-            <span class="text-positive font-bold text-xs">✓ PASSED ({p.fhs}/100)</span>
+            <span class="text-white font-bold text-xs font-mono">✓ PASSED ({p.fhs}/100)</span>
           </div>
 
           <div class="py-3 flex items-start justify-between">
             <div>
               <p class="font-semibold text-white">Debt Burden Ratio</p>
-              <p class="text-text-muted text-[11px]">Threshold: &lt;= 50% of surplus</p>
+              <p class="text-neutral-500 text-[11px] font-mono">Threshold: &lt;= 50% of surplus</p>
             </div>
-            <span class="text-positive font-bold text-xs">✓ PASSED (15.9%)</span>
+            <span class="text-white font-bold text-xs font-mono">✓ PASSED (15.9%)</span>
           </div>
 
           <div class="py-3 flex items-start justify-between">
             <div>
               <p class="font-semibold text-white">Statement Duration</p>
-              <p class="text-text-muted text-[11px]">Threshold: &gt;= 3 months</p>
+              <p class="text-neutral-500 text-[11px] font-mono">Threshold: &gt;= 3 months</p>
             </div>
-            <span class="text-positive font-bold text-xs">✓ PASSED (4 mos)</span>
+            <span class="text-white font-bold text-xs font-mono">✓ PASSED (4 mos)</span>
           </div>
 
           <div class="py-3 flex items-start justify-between">
             <div>
               <p class="font-semibold text-white">Alternative ML Confidence</p>
-              <p class="text-text-muted text-[11px]">Threshold: &gt;= 60.0% probability</p>
+              <p class="text-neutral-500 text-[11px] font-mono">Threshold: &gt;= 60.0% probability</p>
             </div>
-            <span class="text-positive font-bold text-xs">✓ PASSED ({p.prob}%)</span>
+            <span class="text-white font-bold text-xs font-mono">✓ PASSED ({p.prob}%)</span>
           </div>
         </div>
       </div>
 
-      <div class="mt-4 pt-4 border-t border-[#22252B]">
-        <a href="/simulator" class="w-full btn-lime text-xs py-2.5 flex items-center justify-center">
+      <div class="mt-4 pt-4 border-t border-[#222222]">
+        <a href="/simulator" class="w-full btn-white text-xs py-2.5 flex items-center justify-center">
           Open What-If Simulator for {p.name.split(' ')[0]} ➔
         </a>
       </div>

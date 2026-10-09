@@ -23,29 +23,29 @@ const steps = [
 ];
 ---
 
-<section id="how-it-works" class="py-20 bg-[#0C0D0E] border-t border-[#22252B]">
+<section id="how-it-works" class="py-20 bg-black border-t border-[#222222]">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center max-w-2xl mx-auto mb-16">
-      <span class="text-xs font-semibold text-lime uppercase tracking-widest">End-to-End Workflow</span>
+      <span class="text-xs font-mono text-neutral-400 uppercase tracking-widest">End-to-End Workflow</span>
       <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">From Raw Digital Ledger to Verifiable Credit</h2>
-      <p class="text-sm text-text-secondary mt-3">
+      <p class="text-sm text-text-secondary mt-3 font-light">
         A seamless 4-step journey transforming informal transaction logs into institutional-grade credit evidence.
       </p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {steps.map((s) => (
-        <div class="bg-[#16181D] border border-[#22252B] rounded-2xl p-6 relative flex flex-col justify-between">
+        <div class="bg-[#0E0E0E] border border-[#222222] rounded-2xl p-6 relative flex flex-col justify-between hover:border-neutral-700 transition-colors">
           <div>
             <div class="flex items-center justify-between mb-4">
-              <span class="num-mono text-2xl font-bold text-lime">{s.step}</span>
-              <span class="w-2 h-2 rounded-full bg-lime/40"></span>
+              <span class="num-mono text-2xl font-bold text-white">{s.step}</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
             </div>
             <h3 class="text-base font-bold text-white mb-2">{s.title}</h3>
-            <p class="text-xs text-text-secondary leading-relaxed">{s.desc}</p>
+            <p class="text-xs text-text-secondary leading-relaxed font-light">{s.desc}</p>
           </div>
-          <div class="mt-6 pt-4 border-t border-[#22252B]/40">
-            <span class="text-[11px] font-semibold text-text-muted">STEP {s.step} COMPLETED</span>
+          <div class="mt-6 pt-4 border-t border-[#222222]">
+            <span class="text-[11px] font-mono text-neutral-500">STEP {s.step} COMPLETED</span>
           </div>
         </div>
       ))}
