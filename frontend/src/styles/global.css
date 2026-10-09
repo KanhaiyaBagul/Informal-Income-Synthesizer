@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-canvas: #0A0B0D;
+  --bg-surface: #121316;
+  --bg-card: #16181D;
+  --bg-card-hover: #1C1F26;
+  --border-subtle: #22252B;
+  --border-focus: #2D323B;
+  --accent-lime: #D2FC38;
+  --accent-lime-hover: #E2FD66;
+  --accent-text: #0A0B0D;
+  --text-primary: #FFFFFF;
+  --text-secondary: #9CA3AF;
+  --text-muted: #64748B;
+  --pill-gradient: linear-gradient(135deg, #FDE047 0%, #F472B6 50%, #A78BFA 100%);
+  --positive: #34D399;
+  --caution: #FBBF24;
+  --negative: #F87171;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0B0D;
+}
+::-webkit-scrollbar-thumb {
+  background: #22252B;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2D323B;
+}
+
+/* Meiro Pill Buttons */
+.btn-lime {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #D2FC38;
+  color: #0A0B0D;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 15px rgba(210, 252, 56, 0.15);
+}
+.btn-lime:hover {
+  background-color: #E2FD66;
+  box-shadow: 0 0 25px rgba(210, 252, 56, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #16181D;
+  color: #FFFFFF;
+  border: 1px solid #22252B;
+  font-weight: 500;
+  border-radius: 9999px;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+.btn-dark:hover {
+  background-color: #1C1F26;
+  border-color: #2D323B;
+  color: #D2FC38;
+}
+
+/* Meiro KPI Card */
+.card-meiro {
+  background-color: #16181D;
+  border: 1px solid #22252B;
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.card-meiro:hover {
+  border-color: #2D323B;
+}
+
+/* Numeric Mono */
+.num-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+/* Subtle Shimmer */
+@keyframes shimmer {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+.pulse-subtle {
+  animation: shimmer 3s infinite ease-in-out;
+}
